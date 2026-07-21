@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>La Posta - MVP</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const LaPostaMVP = () => {
+            const [currentPage, setCurrentPage] = useState('welcome');
+            const [cart, setCart] = useState([]);
+            const [savedCart, setSavedCart] = useState(null);
+            const [userEmail, setUserEmail] = useState('');
+            const [userName, setUserName] = useState('');
+            const [hasMembership, setHasMembership] = useState(false);
+            const [orderNumber, setOrderNumber] = useState(null);
+
+            // PRECIOS REALES ARGENTINA (sin TACC - 2-3x más caro)
+            const products = {
+                panificados: [
+                    {
+                        id: 'p1',
+                        name: 'Pan sin TACC Integral (Fargo)',
+                        category: 'Panificados',
+                        price: 520,
+                        image: '🍞',
+                        composition: 'Almidón de maíz, harina de arroz, agua, sal, levadura, semillas',
+                        certified: true,
+                        stock: 15
+                    },
+                    {
+                        id: 'p2',
+                        name: 'Medialunas sin TACC',
+                        category: 'Panificados',
+                        price: 720,
+                        image: '🥐',
+                        composition: 'Harina de arroz, manteca, azúcar, sal, levadura',
+                        certified: true,
+                        stock: 8
+                    },
+                    {
+                        id: 'p3',
+                        name: 'Galletitas de agua sin TACC',
+                        category: 'Panificados',
+                        price: 340,
+                        image: '🍘',
+                        composition: 'Almidón de papa, aceite de girasol, sal, leudante',
+                        certified: true,
+                        stock: 20
+                    }
+                ],
+                harinas: [
+                    {
+                        id: 'h1',
+                        name: 'Premezcla Universal sin TACC',
+                        category: 'Harinas',
+                        price: 1050,
+                        image: '🌾',
+                        composition: 'Harina de arroz, almidón de maíz, goma xantana, sal',
+                        certified: true,
+                        stock: 12
+                    },
+                    {
+                        id: 'h2',
+                        name: 'Harina de Almendras Premium',
+                        category: 'Harinas',
+                        price: 2100,
+                        image: '🥜',
+                        composition: '100% almendra molida, sin aditivos',
+                        certified: true,
+                        stock: 6
+                    }
+                ],
+                snacks: [
+                    {
+                        id: 's1',
+                        name: 'Barra de Chocolate Algarroba',
+                        category: 'Snacks',
+                        price: 480,
+                        image: '🍫',
+                        composition: 'Algarroba, cacao, azúcar, aceite de coco',
+                        certified: true,
+                        stock: 18
+                    },
+                    {
+                        id: 's2',
+                        name: 'Barrita de Quinua y Miel',
+                        category: 'Snacks',
+                        price: 420,
+                        image: '🍱',
+                        composition: 'Quinua inflada, miel, almíbar, semillas',
+                        certified: true,
+                        stock: 14
+                    }
+                ],
+                congelados: [
+                    {
+                        id: 'c1',
+                        name: 'Empanadas de Carne sin TACC (6 unidades)',
+                        category: 'Congelados',
+                        price: 1080,
+                        image: '🥟',
+                        composition: 'Carne vacuna, cebolla, especias, masa de arroz',
+                        certified: true,
+                        stock: 10
+                    }
+                ]
+            };
+
+            const allProducts = Object.values(products).flat();
+
+            // Guardar en localStorage
+            useEffect(() => {
+                const saved = localStorage.getItem('lapostaCart');
+                const savedUser = localStorage.getItem('lapostaUser');
+                const savedUserName = localStorage.getItem('lapostaUserName');
+                const savedMembership = localStorage.getItem('lapostaMembership');
+                
+                if (saved) setSavedCart(JSON.parse(saved));
+                if (savedUser) setUserEmail(savedUser);
+                if (savedUserName) setUserName(savedUserName);
+                if (savedMembership) setHasMembership(JSON.parse(savedMembership));
+            }, []);
+
+            // Calcular precio con descuentos
+            const calculatePrice = (product, quantity) => {
+                let price = product.price;
+                
+                // Descuento membresía: 10%
+                if (hasMembership) {
+                    price = price * 0.9;
+                }
+                
+                // Descuento volumen: +5% si compran >3 unidades
+                if (quantity > 3) {
+                    price = price * 0.95;
+                }
+                
+                return Math.round(price);
+            };
+
+            // Calcular total carrito
+            const calculateCartTotal = () => {
+                let subtotal = 0;
+                let totalItems = 0;
+                
+                cart.forEach(item => {
+                    const qty = item.quantity || 1;
+                    totalItems += qty;
+                    const unitPrice = calculatePrice(item, qty);
+                    subtotal += unitPrice * qty;
+                });
+
+                // Envío
+                const shipping = hasMembership ? 0 : 350;
+                const total = subtotal + shipping;
+
+                return { subtotal, total, shipping, totalItems };
+            };
+
+            // Generar número de pedido
+            const generateOrderNumber = () => {
+                const timestamp = Date.now().toString().slice(-6);
+                const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+                return `LP-${timestamp}-${random}`;
+            };
+
+            // WELCOME PAGE
+            const WelcomePage = () => (
+                <div className="min-h-screen bg-gradient-to-b from-amber-50 to-amber-100 p-6 flex flex-col justify-center items-center">
+                    <div className="text-6xl mb-4">🌾</div>
+                    <h1 className="text-4xl font-bold text-amber-900 mb-2">La Posta</h1>
+                    <p className="text-xl text-amber-800 mb-6 text-center">Tu mes sin TACC resuelto</p>
+                    
+                    <div className="bg-white rounded-lg p-6 max-w-md mb-8 shadow-lg">
+                        <div className="space-y-4 mb-6">
+                            <div className="flex items-start gap-3">
+                                <span className="text-green-600 text-xl mt-1">✓</span>
+                                <div>
+                                    <p className="font-semibold">Precios al por mayor</p>
+                                    <p className="text-sm text-gray-600">Compra en volumen = menor costo</p>
+                                </div>
+                            </div>
+                            <div className="flex items-start gap-3">
+                                <span className="text-green-600 text-xl mt-1">✓</span>
+                                <div>
+                                    <p className="font-semibold">Todo certificado sin TACC</p>
+                                    <p className="text-sm text-gray-600">Sello SENASA en cada producto</p>
+                                </div>
+                            </div>
+                            <div className="flex items-start gap-3">
+                                <span className="text-green-600 text-xl mt-1">✓</span>
+                                <div>
+                                    <p className="font-semibold">Envío a domicilio</p>
+                                    <p className="text-sm text-gray-600">CABA y AMBA con tracking</p>
+                                </div>
+                            </div>
+                            <div className="flex items-start gap-3">
+                                <span className="text-green-600 text-xl mt-1">✓</span>
+                                <div>
+                                    <p className="font-semibold">Canasta guardada</p>
+                                    <p className="text-sm text-gray-600">Recompra fácil cada mes</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <input
+                            type="text"
+                            placeholder="Tu nombre"
+                            value={userName}
+                            onChange={(e) => setUserName(e.target.value)}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg mb-3"
+                        />
+                        <input
+                            type="email"
+                            placeholder="Tu email"
+                            value={userEmail}
+                            onChange={(e) => setUserEmail(e.target.value)}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg mb-3"
+                        />
+                        
+                        <button
+                            onClick={() => {
+                                if (userEmail && userName) {
+                                    localStorage.setItem('lapostaUser', userEmail);
+                                    localStorage.setItem('lapostaUserName', userName);
+                                    setCurrentPage('membership');
+                                }
+                            }}
+                            disabled={!userEmail || !userName}
+                            className="w-full bg-amber-700 text-white py-3 rounded-lg font-semibold disabled:opacity-50"
+                        >
+                            Comenzar
+                        </button>
+                    </div>
+                </div>
+            );
+
+            // MEMBERSHIP PAGE
+            const MembershipPage = () => (
+                <div className="min-h-screen bg-gradient-to-b from-purple-50 to-purple-100 p-6">
+                    <div className="max-w-md mx-auto pt-8">
+                        <h2 className="text-2xl font-bold text-purple-900 mb-6">Elige tu plan</h2>
+                        
+                        <div className="space-y-4">
+                            {/* Plan Sin Membresía */}
+                            <div 
+                                onClick={() => {
+                                    setHasMembership(false);
+                                    localStorage.setItem('lapostaMembership', 'false');
+                                    setCurrentPage('home');
+                                }}
+                                className="bg-white p-6 rounded-lg border-2 border-gray-300 cursor-pointer hover:border-amber-500 transition"
+                            >
+                                <p className="font-semibold text-lg mb-2">Sin Membresía</p>
+                                <p className="text-gray-600 mb-4">Prueba primero</p>
+                                <ul className="text-sm space-y-2 mb-4">
+                                    <li>✓ Acceso a catálogo completo</li>
+                                    <li>✓ Productos certificados SENASA</li>
+                                    <li>✓ Envío a domicilio: $350</li>
+                                    <li>✗ Sin descuentos adicionales</li>
+                                </ul>
+                                <button className="w-full bg-gray-400 text-white py-2 rounded font-semibold">
+                                    Empezar sin membresía
+                                </button>
+                            </div>
+
+                            {/* Plan Membresía */}
+                            <div 
+                                onClick={() => {
+                                    setHasMembership(true);
+                                    localStorage.setItem('lapostaMembership', 'true');
+                                    setCurrentPage('home');
+                                }}
+                                className="bg-gradient-to-br from-amber-100 to-amber-50 p-6 rounded-lg border-3 border-amber-500 cursor-pointer hover:shadow-lg transition ring-2 ring-amber-300"
+                            >
+                                <div className="flex justify-between items-start mb-2">
+                                    <p className="font-semibold text-lg text-amber-900">Membresía Mensual</p>
+                                    <span className="bg-amber-500 text-white text-xs px-3 py-1 rounded-full">MEJOR VALOR</span>
+                                </div>
+                                <p className="text-2xl font-bold text-amber-700 mb-2">10% descuento</p>
+                                <p className="text-sm text-amber-700 mb-4">+ 5% extra si compras >3 unidades</p>
+                                <ul className="text-sm space-y-2 mb-4">
+                                    <li>✓ 10% descuento en todos los productos</li>
+                                    <li>✓ +5% más si compras >3 unidades</li>
+                                    <li>✓ Envío GRATIS</li>
+                                    <li>✓ Canasta guardada</li>
+                                    <li>✓ Acceso a comunidad</li>
+                                </ul>
+                                <button className="w-full bg-amber-600 text-white py-2 rounded font-semibold hover:bg-amber-700">
+                                    Activar membresía
+                                </button>
+                            </div>
+                        </div>
+
+                        <p className="text-xs text-gray-600 mt-6 text-center">
+                            Puedes cambiar de plan en cualquier momento
+                        </p>
+                    </div>
+                </div>
+            );
+
+            // HOME PAGE
+            const HomePage = () => {
+                const { totalItems } = calculateCartTotal();
+
+                return (
+                <div className="min-h-screen bg-gray-50 pb-20">
+                    {/* Header */}
+                    <div className="bg-amber-700 text-white p-4 sticky top-0 z-10">
+                        <div className="flex justify-between items-center mb-3">
+                            <h1 className="text-2xl font-bold">La Posta</h1>
+                            <span>🛒</span>
+                        </div>
+                        {hasMembership && (
+                            <div className="bg-amber-600 px-3 py-1 rounded-full text-sm w-fit">
+                                ✓ Membresía activa - 10% + 5% descuentos
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Proposición de valor */}
+                    <div className="bg-white border-b-2 border-amber-200 p-4">
+                        <div className="flex items-start gap-2 mb-3">
+                            <span className="text-green-600 text-xl flex-shrink-0 mt-0.5">✓</span>
+                            <div className="text-sm">
+                                <p className="font-semibold text-gray-800">Todos nuestros productos tienen sello SENASA</p>
+                                <p className="text-gray-600 text-xs mt-1">Composición y seguridad garantizada</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Carrito guardado */}
+                    {savedCart && (
+                        <div className="bg-blue-50 border-l-4 border-blue-500 p-4 m-4">
+                            <p className="font-semibold text-blue-900 mb-2">📅 Canasta del mes anterior</p>
+                            <p className="text-sm text-blue-800 mb-3">
+                                {savedCart.items.length} productos | Siguiente entrega: {savedCart.nextDelivery}
+                            </p>
+                            <button
+                                onClick={() => {
+                                    setCart(savedCart.items);
+                                    setSavedCart(null);
+                                }}
+                                className="bg-blue-600 text-white px-4 py-2 rounded text-sm font-semibold"
+                            >
+                                Reproducir canasta
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Categorías de productos */}
+                    <div className="p-4 space-y-6">
+                        {Object.entries({
+                            'Panificados': products.panificados,
+                            'Harinas': products.harinas,
+                            'Snacks': products.snacks,
+                            'Congelados': products.congelados
+                        }).map(([category, items]) => (
+                            <div key={category}>
+                                <h3 className="text-lg font-bold text-gray-800 mb-3">{category}</h3>
+                                <div className="space-y-2">
+                                    {items.map(product => {
+                                        const inCart = cart.find(p => p.id === product.id);
+                                        const cartItem = inCart;
+                                        const qty = cartItem ? (cartItem.quantity || 1) : 1;
+                                        const pricePerUnit = calculatePrice(product, qty);
+                                        const originalPrice = product.price;
+                                        const discountPercent = hasMembership ? 10 : 0;
+                                        
+                                        return (
+                                            <div
+                                                key={product.id}
+                                                className="bg-white p-4 rounded-lg border border-gray-200 hover:shadow-md transition cursor-pointer"
+                                                onClick={() => setCurrentPage(`product-${product.id}`)}
+                                            >
+                                                <div className="flex justify-between items-start gap-3">
+                                                    <div className="flex-1">
+                                                        <p className="text-2xl mb-1">{product.image}</p>
+                                                        <p className="font-semibold text-gray-800">{product.name}</p>
+                                                        <div className="flex items-center gap-2 mt-1">
+                                                            {product.certified && (
+                                                                <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
+                                                                    ✓ Sin TACC
+                                                                </span>
+                                                            )}
+                                                            {discountPercent > 0 && (
+                                                                <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded font-semibold">
+                                                                    -{discountPercent}%
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <p className="font-bold text-lg text-amber-700">${pricePerUnit}</p>
+                                                        {hasMembership && (
+                                                            <p className="text-xs text-gray-500 line-through">${originalPrice}</p>
+                                                        )}
+                                                        <p className="text-xs text-gray-600 mt-1">Stock: {product.stock}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="mt-3 flex gap-2">
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            if (!inCart && product.stock > 0) {
+                                                                setCart([...cart, { ...product, quantity: 1, cartId: Math.random() }]);
+                                                            } else if (inCart) {
+                                                                setCart(cart.filter(p => p.cartId !== inCart.cartId));
+                                                            }
+                                                        }}
+                                                        className={`flex-1 py-2 rounded font-semibold text-sm transition ${
+                                                            inCart 
+                                                                ? 'bg-red-100 text-red-700 hover:bg-red-200' 
+                                                                : 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                                                        }`}
+                                                    >
+                                                        {inCart ? '✓ En carrito' : '+ Agregar'}
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setCurrentPage(`product-${product.id}`);
+                                                        }}
+                                                        className="px-4 py-2 rounded font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200"
+                                                    >
+                                                        Info
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Bottom Navigation */}
+                    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around p-3">
+                        <button
+                            onClick={() => setCurrentPage('home')}
+                            className="flex flex-col items-center gap-1 text-amber-700 font-semibold"
+                        >
+                            <span className="text-2xl">🏠</span>
+                            <span className="text-xs">Inicio</span>
+                        </button>
+                        <button
+                            onClick={() => setCurrentPage('cart')}
+                            className={`flex flex-col items-center gap-1 font-semibold relative ${cart.length > 0 ? 'text-amber-700' : 'text-gray-500'}`}
+                        >
+                            <span className="text-2xl">🛒</span>
+                            {cart.length > 0 && (
+                                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                                    {totalItems}
+                                </span>
+                            )}
+                            <span className="text-xs">Carrito</span>
+                        </button>
+                        <button
+                            onClick={() => setCurrentPage('community')}
+                            className="flex flex-col items-center gap-1 text-gray-500 font-semibold"
+                        >
+                            <span className="text-2xl">👥</span>
+                            <span className="text-xs">Comunidad</span>
+                        </button>
+                        <button
+                            onClick={() => {
+                                setCurrentPage('welcome');
+                                setUserEmail('');
+                                setUserName('');
+                                setCart([]);
+                                localStorage.removeItem('lapostaUser');
+                                localStorage.removeItem('lapostaUserName');
+                            }}
+                            className="flex flex-col items-center gap-1 text-gray-500 font-semibold"
+                        >
+                            <span className="text-2xl">🚪</span>
+                            <span className="text-xs">Salir</span>
+                        </button>
+                    </div>
+                </div>
+            );
+            };
+
+            // PRODUCT PAGE
+            const ProductPage = ({ productId }) => {
+                const product = allProducts.find(p => p.id === productId);
+                if (!product) return null;
+
+                const inCart = cart.find(p => p.id === productId);
+                const qty = inCart ? (inCart.quantity || 1) : 1;
+                const pricePerUnit = calculatePrice(product, qty);
+
+                return (
+                    <div className="min-h-screen bg-gray-50">
+                        <button
+                            onClick={() => setCurrentPage('home')}
+                            className="p-4 text-amber-700 font-semibold"
+                        >
+                            ← Volver
+                        </button>
+
+                        <div className="p-6 max-w-md mx-auto">
+                            <div className="text-6xl mb-4 text-center">{product.image}</div>
+                            <h1 className="text-2xl font-bold text-gray-800 mb-4">{product.name}</h1>
+
+                            {/* Información de seguridad */}
+                            <div className="bg-green-50 border-l-4 border-green-500 p-4 mb-6">
+                                <p className="font-semibold text-green-900 mb-2">✓ Seguridad garantizada</p>
+                                <p className="text-sm text-green-800 mb-3">Certificado sin TACC por SENASA</p>
+                                <div className="bg-white p-3 rounded">
+                                    <p className="text-xs font-semibold text-gray-700 mb-2">Composición:</p>
+                                    <p className="text-sm text-gray-600">{product.composition}</p>
+                                </div>
+                            </div>
+
+                            {/* Precio */}
+                            <div className="bg-white p-4 rounded-lg mb-6">
+                                <p className="text-sm text-gray-600 mb-2">Precio unitario:</p>
+                                <p className="text-3xl font-bold text-amber-700">${pricePerUnit}</p>
+                                {hasMembership && (
+                                    <div className="mt-2 p-2 bg-amber-50 rounded">
+                                        <p className="text-xs text-amber-700">
+                                            <span className="line-through text-gray-500">${product.price}</span> (Miembro: -10%)
+                                        </p>
+                                        <p className="text-xs text-amber-600 mt-1">+5% descuento adicional si compras >3</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Stock */}
+                            <div className="bg-blue-50 p-4 rounded-lg mb-6">
+                                <p className="text-sm font-semibold text-blue-900">
+                                    Stock disponible: {product.stock} unidades
+                                </p>
+                            </div>
+
+                            {/* Botón de compra */}
+                            <button
+                                onClick={() => {
+                                    if (!inCart && product.stock > 0) {
+                                        setCart([...cart, { ...product, quantity: 1, cartId: Math.random() }]);
+                                    }
+                                    setCurrentPage('home');
+                                }}
+                                disabled={product.stock === 0 || inCart}
+                                className={`w-full py-3 rounded-lg font-semibold text-white mb-4 ${
+                                    inCart 
+                                        ? 'bg-gray-400 cursor-not-allowed' 
+                                        : product.stock > 0 
+                                        ? 'bg-amber-700 hover:bg-amber-800' 
+                                        : 'bg-gray-400 cursor-not-allowed'
+                                }`}
+                            >
+                                {inCart ? '✓ En carrito' : product.stock > 0 ? 'Agregar al carrito' : 'Sin stock'}
+                            </button>
+                        </div>
+                    </div>
+                );
+            };
+
+            // CART PAGE
+            const CartPage = () => {
+                const { subtotal, total, shipping, totalItems } = calculateCartTotal();
+                const originalSubtotal = cart.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0);
+                const discountAmount = originalSubtotal - subtotal;
+
+                return (
+                    <div className="min-h-screen bg-gray-50 pb-24">
+                        <div className="bg-amber-700 text-white p-4">
+                            <button
+                                onClick={() => setCurrentPage('home')}
+                                className="text-amber-100 mb-3"
+                            >
+                                ← Volver
+                            </button>
+                            <h1 className="text-2xl font-bold">Mi Carrito</h1>
+                        </div>
+
+                        {cart.length === 0 ? (
+                            <div className="p-6 text-center">
+                                <p className="text-2xl mb-3">🛒</p>
+                                <p className="text-gray-600">Tu carrito está vacío</p>
+                            </div>
+                        ) : (
+                            <div className="p-4 space-y-4 max-w-md mx-auto">
+                                {cart.map((item, idx) => {
+                                    const qty = item.quantity || 1;
+                                    const pricePerUnit = calculatePrice(item, qty);
+                                    const itemTotal = pricePerUnit * qty;
+                                    
+                                    return (
+                                        <div key={idx} className="bg-white p-4 rounded-lg">
+                                            <div className="flex justify-between items-start mb-2">
+                                                <div>
+                                                    <p className="text-lg">{item.image} {item.name}</p>
+                                                    <p className="text-sm text-gray-600">${pricePerUnit} x {qty} = ${itemTotal}</p>
+                                                </div>
+                                                <button
+                                                    onClick={() => setCart(cart.filter((_, i) => i !== idx))}
+                                                    className="text-red-600 font-semibold text-sm"
+                                                >
+                                                    ✕
+                                                </button>
+                                            </div>
+                                            
+                                            {/* Cantidad */}
+                                            <div className="flex items-center gap-2 mt-2">
+                                                <button
+                                                    onClick={() => {
+                                                        const newCart = [...cart];
+                                                        newCart[idx].quantity = Math.max(1, (newCart[idx].quantity || 1) - 1);
+                                                        setCart(newCart);
+                                                    }}
+                                                    className="px-2 py-1 bg-gray-200 rounded"
+                                                >
+                                                    −
+                                                </button>
+                                                <span className="text-sm font-semibold">{qty}</span>
+                                                <button
+                                                    onClick={() => {
+                                                        const newCart = [...cart];
+                                                        newCart[idx].quantity = (newCart[idx].quantity || 1) + 1;
+                                                        setCart(newCart);
+                                                    }}
+                                                    className="px-2 py-1 bg-gray-200 rounded"
+                                                >
+                                                    +
+                                                </button>
+                                                {qty > 3 && (
+                                                    <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded ml-auto">
+                                                        +5% descto
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+
+                                {/* Resumen */}
+                                <div className="bg-white p-4 rounded-lg mt-6">
+                                    <div className="flex justify-between mb-2 pb-2 border-b">
+                                        <p className="text-gray-700">Subtotal:</p>
+                                        <p className="font-semibold">${subtotal}</p>
+                                    </div>
+                                    {discountAmount > 0 && (
+                                        <div className="flex justify-between mb-2 pb-2 border-b text-green-700">
+                                            <p>Descuentos:</p>
+                                            <p className="font-semibold">-${discountAmount}</p>
+                                        </div>
+                                    )}
+                                    <div className="flex justify-between mb-2 pb-2 border-b">
+                                        <p className="text-gray-700">Envío:</p>
+                                        <p className="font-semibold">${shipping}</p>
+                                    </div>
+                                    <div className="flex justify-between mt-3 pt-3 border-t-2 border-amber-700">
+                                        <p className="text-lg font-bold">Total:</p>
+                                        <p className="text-2xl font-bold text-amber-700">${total}</p>
+                                    </div>
+                                </div>
+
+                                {/* Botones de acción */}
+                                <div className="space-y-3 mt-6">
+                                    <button
+                                        onClick={() => setCurrentPage('checkout')}
+                                        className="w-full bg-amber-700 text-white py-3 rounded-lg font-semibold hover:bg-amber-800"
+                                    >
+                                        Proceder al pago
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            localStorage.setItem('lapostaCart', JSON.stringify({
+                                                items: cart,
+                                                savedAt: new Date().toISOString(),
+                                                nextDelivery: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()
+                                            }));
+                                            setSavedCart({ items: cart });
+                                            alert('✓ Canasta guardada para próximo mes');
+                                        }}
+                                        className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700"
+                                    >
+                                        Guardar para próximo mes
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                );
+            };
+
+            // CHECKOUT PAGE
+            const CheckoutPage = () => {
+                const [orderPlaced, setOrderPlaced] = useState(false);
+                const [deliveryDate] = useState(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('es-AR'));
+                const [address, setAddress] = useState('');
+                const { subtotal, total, shipping } = calculateCartTotal();
+
+                if (orderPlaced) {
+                    const generatedOrderNumber = generateOrderNumber();
+                    
+                    return (
+                        <div className="min-h-screen bg-gradient-to-b from-green-50 to-green-100 p-6 flex flex-col justify-center items-center">
+                            <div className="text-6xl mb-4">✓</div>
+                            <h1 className="text-3xl font-bold text-green-900 mb-2">¡Pedido Confirmado!</h1>
+                            <p className="text-green-700 mb-6">Gracias, {userName}</p>
+
+                            <div className="bg-white rounded-lg p-6 max-w-md w-full shadow-lg mb-6">
+                                {/* Número de pedido */}
+                                <div className="bg-amber-50 p-4 rounded-lg mb-4 border-2 border-amber-700">
+                                    <p className="text-sm text-amber-700 font-semibold mb-1">Número de pedido:</p>
+                                    <p className="text-2xl font-bold text-amber-900">{generatedOrderNumber}</p>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <div className="flex items-start gap-3">
+                                        <span className="text-2xl">⏰</span>
+                                        <div>
+                                            <p className="font-semibold">Entrega estimada</p>
+                                            <p className="text-sm text-gray-600">{deliveryDate}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-start gap-3">
+                                        <span className="text-2xl">📍</span>
+                                        <div>
+                                            <p className="font-semibold">Domicilio</p>
+                                            <p className="text-sm text-gray-600">{address}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-start gap-3">
+                                        <span className="text-2xl">📦</span>
+                                        <div>
+                                            <p className="font-semibold">{cart.length} productos</p>
+                                            <p className="text-sm text-gray-600">Todos certificados sin TACC</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Resumen de compra */}
+                                <div className="bg-gray-50 p-3 rounded mt-4 border border-gray-200">
+                                    <p className="text-xs font-semibold text-gray-700 mb-2">Resumen:</p>
+                                    <div className="space-y-1 text-xs">
+                                        <div className="flex justify-between">
+                                            <span>Subtotal:</span>
+                                            <span>${subtotal}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span>Envío:</span>
+                                            <span>${shipping}</span>
+                                        </div>
+                                        <div className="flex justify-between font-bold border-t pt-1 mt-1">
+                                            <span>Total:</span>
+                                            <span>${total}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Email confirmación */}
+                                <p className="text-xs text-gray-600 mt-4 text-center">
+                                    Confirmación enviada a: <span className="font-semibold">{userEmail}</span>
+                                </p>
+                            </div>
+
+                            <div className="w-full space-y-2 max-w-md">
+                                <button
+                                    onClick={() => {
+                                        window.open('https://form.typeform.com/to/YVsFpl4n', '_blank');
+                                    }}
+                                    className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700"
+                                >
+                                    Completar formulario de feedback (2 min)
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setCart([]);
+                                        setOrderPlaced(false);
+                                        setCurrentPage('home');
+                                    }}
+                                    className="w-full bg-green-700 text-white py-3 rounded-lg font-semibold hover:bg-green-800"
+                                >
+                                    Volver al inicio
+                                </button>
+                            </div>
+                        </div>
+                    );
+                }
+
+                return (
+                    <div className="min-h-screen bg-gray-50 pb-20">
+                        <div className="bg-amber-700 text-white p-4">
+                            <h1 className="text-2xl font-bold">Completar compra</h1>
+                        </div>
+
+                        <div className="p-4 space-y-4 max-w-md mx-auto">
+                            {/* Resumen de pedido */}
+                            <div className="bg-white p-4 rounded-lg">
+                                <p className="font-semibold text-gray-800 mb-4">Resumen del pedido</p>
+                                {cart.map((item, idx) => {
+                                    const qty = item.quantity || 1;
+                                    const pricePerUnit = calculatePrice(item, qty);
+                                    const itemTotal = pricePerUnit * qty;
+                                    return (
+                                        <div key={idx} className="flex justify-between text-sm mb-2">
+                                            <span>{item.name} x{qty}</span>
+                                            <span>${itemTotal}</span>
+                                        </div>
+                                    );
+                                })}
+                                <div className="border-t pt-3 mt-3 flex justify-between font-bold text-lg">
+                                    <span>Total:</span>
+                                    <span className="text-amber-700">${total}</span>
+                                </div>
+                            </div>
+
+                            {/* Domicilio */}
+                            <div className="bg-white p-4 rounded-lg">
+                                <p className="font-semibold text-gray-800 mb-4">Domicilio de entrega</p>
+                                <input
+                                    type="text"
+                                    placeholder="Calle y número"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded mb-3"
+                                />
+                                <input
+                                    type="text"
+                                    placeholder="Piso/Depto (opcional)"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded mb-3"
+                                />
+                                <input
+                                    type="text"
+                                    placeholder="Ciudad/Localidad"
+                                    value={address}
+                                    onChange={(e) => setAddress(e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded"
+                                />
+                            </div>
+
+                            {/* Info entrega */}
+                            <div className="bg-blue-50 p-4 rounded-lg">
+                                <p className="text-sm text-blue-800">
+                                    <span className="font-semibold">📅 Entrega:</span> {new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('es-AR')}
+                                </p>
+                                <p className="text-sm text-blue-800 mt-2">
+                                    <span className="font-semibold">📱 Tracking:</span> Recibirás notificaciones en cada etapa
+                                </p>
+                            </div>
+
+                            <button
+                                onClick={() => {
+                                    if (address) {
+                                        localStorage.setItem('lapostaCart', JSON.stringify({
+                                            items: cart,
+                                            savedAt: new Date().toISOString(),
+                                            nextDelivery: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()
+                                        }));
+                                        setOrderPlaced(true);
+                                    } else {
+                                        alert('Por favor completa el domicilio');
+                                    }
+                                }}
+                                className="w-full bg-amber-700 text-white py-3 rounded-lg font-semibold hover:bg-amber-800"
+                            >
+                                Confirmar pedido
+                            </button>
+                        </div>
+                    </div>
+                );
+            };
+
+            // COMMUNITY PAGE
+            const CommunityPage = () => (
+                <div className="min-h-screen bg-gray-50 pb-20">
+                    <div className="bg-amber-700 text-white p-4">
+                        <button
+                            onClick={() => setCurrentPage('home')}
+                            className="text-amber-100 mb-3"
+                        >
+                            ← Volver
+                        </button>
+                        <h1 className="text-2xl font-bold">Comunidad sin TACC</h1>
+                    </div>
+
+                    <div className="p-4 space-y-4 max-w-md mx-auto">
+                        <div className="bg-white p-4 rounded-lg">
+                            <p className="font-semibold text-gray-800 mb-2">🍳 Recetas</p>
+                            <p className="text-sm text-gray-600">Compartí tus recetas favoritas sin TACC y descubre nuevas ideas</p>
+                        </div>
+
+                        <div className="bg-white p-4 rounded-lg">
+                            <p className="font-semibold text-gray-800 mb-2">⭐ Restaurantes</p>
+                            <p className="text-sm text-gray-600">Mapa de restaurantes sin TACC en CABA y AMBA</p>
+                        </div>
+
+                        <div className="bg-white p-4 rounded-lg">
+                            <p className="font-semibold text-gray-800 mb-2">💬 Foro</p>
+                            <p className="text-sm text-gray-600">Conecta con otros celíacos y resuelve dudas</p>
+                        </div>
+
+                        <div className="bg-amber-50 p-4 rounded-lg text-center">
+                            <p className="text-sm text-amber-800">
+                                <span className="font-semibold">⚠️ Próximamente</span><br />
+                                Estas funciones estarán disponibles en la versión completa
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            );
+
+            // ROUTER
+            if (currentPage === 'welcome') return <WelcomePage />;
+            if (currentPage === 'membership') return <MembershipPage />;
+            if (currentPage === 'home') return <HomePage />;
+            if (currentPage.startsWith('product-')) return <ProductPage productId={currentPage.replace('product-', '')} />;
+            if (currentPage === 'cart') return <CartPage />;
+            if (currentPage === 'checkout') return <CheckoutPage />;
+            if (currentPage === 'community') return <CommunityPage />;
+        };
+
+        ReactDOM.render(<LaPostaMVP />, document.getElementById('root'));
+    </script>
+</body>
+</html>
