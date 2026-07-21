@@ -14,7 +14,6 @@
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
         
-        /* Animación suave para la entrada de la notificación */
         @keyframes slideUp {
             from { transform: translateY(100%); opacity: 0; }
             to { transform: translateY(0); opacity: 1; }
@@ -38,6 +37,9 @@
             const [userName, setUserName] = useState('');
             const [hasMembership, setHasMembership] = useState(false);
 
+            // Historial de compras para la sección de Usuario
+            const [lastOrder, setLastOrder] = useState(null);
+
             // Estado para el cartel/notificación de "Producto Agregado"
             const [addedNotification, setAddedNotification] = useState(null);
 
@@ -50,17 +52,16 @@
             const [selectedTimeSlot, setSelectedTimeSlot] = useState('09:00 - 13:00');
             const [deliveryNotes, setDeliveryNotes] = useState('');
 
-            // Ocultar notificación automáticamente después de 4 segundos
+            // Pop-up dura 6 segundos (2 segundos más)
             useEffect(() => {
                 if (addedNotification) {
                     const timer = setTimeout(() => {
                         setAddedNotification(null);
-                    }, 4000);
+                    }, 6000);
                     return () => clearTimeout(timer);
                 }
             }, [addedNotification]);
 
-            // Calcular fecha mínima de entrega (3 días hábiles en adelante)
             const getMinDeliveryDate = () => {
                 const date = new Date();
                 let addedDays = 0;
@@ -75,7 +76,6 @@
 
             const minDateStr = getMinDeliveryDate();
 
-            // PRECIOS REALES ARGENTINA
             const products = {
                 panificados: [
                     {
@@ -84,6 +84,7 @@
                         category: 'Panificados',
                         price: 520,
                         image: '🍞',
+                        brand: 'Fargo',
                         composition: 'Almidón de maíz, harina de arroz, agua, sal, levadura, semillas',
                         certified: true,
                         stock: 15
@@ -94,6 +95,7 @@
                         category: 'Panificados',
                         price: 720,
                         image: '🥐',
+                        brand: 'Celidarina',
                         composition: 'Harina de arroz, manteca, azúcar, sal, levadura',
                         certified: true,
                         stock: 8
@@ -104,6 +106,7 @@
                         category: 'Panificados',
                         price: 340,
                         image: '🍘',
+                        brand: 'Smack',
                         composition: 'Almidón de papa, aceite de girasol, sal, leudante',
                         certified: true,
                         stock: 20
@@ -116,6 +119,7 @@
                         category: 'Harinas',
                         price: 1050,
                         image: '🌾',
+                        brand: 'Santalucía',
                         composition: 'Harina de arroz, almidón de maíz, goma xantana, sal',
                         certified: true,
                         stock: 12
@@ -126,6 +130,7 @@
                         category: 'Harinas',
                         price: 2100,
                         image: '🥜',
+                        brand: 'NutriFit',
                         composition: '100% almendra molida, sin aditivos',
                         certified: true,
                         stock: 6
@@ -138,6 +143,7 @@
                         category: 'Snacks',
                         price: 480,
                         image: '🍫',
+                        brand: 'Zafrán',
                         composition: 'Algarroba, cacao, azúcar, aceite de coco',
                         certified: true,
                         stock: 18
@@ -148,6 +154,7 @@
                         category: 'Snacks',
                         price: 420,
                         image: '🍱',
+                        brand: 'Crowie',
                         composition: 'Quinua inflada, miel, almíbar, semillas',
                         certified: true,
                         stock: 14
@@ -156,10 +163,11 @@
                 congelados: [
                     {
                         id: 'c1',
-                        name: 'Empanadas de Carne sin TACC (6 unidades)',
+                        name: 'Empanadas de Carne sin TACC (6u)',
                         category: 'Congelados',
                         price: 1080,
                         image: '🥟',
+                        brand: 'La Celiaca',
                         composition: 'Carne vacuna, cebolla, especias, masa de arroz',
                         certified: true,
                         stock: 10
@@ -169,12 +177,12 @@
 
             const allProducts = Object.values(products).flat();
 
-            // Guardar y cargar localStorage
             useEffect(() => {
                 try {
                     const savedUser = localStorage.getItem('lapostaUser');
                     const savedUserName = localStorage.getItem('lapostaUserName');
                     const savedMembership = localStorage.getItem('lapostaMembership');
+                    const savedLastOrder = localStorage.getItem(`lapostaLastOrder_${savedUser}`);
                     
                     if (savedUser) {
                         setUserEmail(savedUser);
@@ -183,12 +191,12 @@
                     }
                     if (savedUserName) setUserName(savedUserName);
                     if (savedMembership) setHasMembership(JSON.parse(savedMembership));
+                    if (savedLastOrder) setLastOrder(JSON.parse(savedLastOrder));
                 } catch (e) {
                     console.error("Error al cargar localStorage", e);
                 }
             }, []);
 
-            // Lógica de precios
             const calculatePrice = (product, quantity = 1) => {
                 let price = product.price;
                 if (hasMembership) {
@@ -229,16 +237,20 @@
                 return email.includes('@') && email.includes('.');
             };
 
-            // Función reutilizable para agregar productos y gatillar la notificación rápida
-            const handleAddToCart = (product) => {
-                const inCart = cart.find(p => p.id === product.id);
-                if (!inCart && product.stock > 0) {
-                    setCart([...cart, { ...product, quantity: 1, cartId: Math.random() }]);
-                    setAddedNotification(product); // Activa el cartel flotante
+            // Manejo dinámico de cantidad en catálogo
+            const updateProductQuantity = (product, newQty) => {
+                const existingIndex = cart.findIndex(p => p.id === product.id);
+                if (newQty <= 0) {
+                    setCart(cart.filter(p => p.id !== product.id));
+                } else if (existingIndex >= 0) {
+                    const updated = [...cart];
+                    updated[existingIndex].quantity = newQty;
+                    setCart(updated);
+                } else {
+                    setCart([...cart, { ...product, quantity: newQty, cartId: Math.random() }]);
+                    setAddedNotification({ ...product, quantity: newQty });
                 }
             };
-
-            // --- COMPONENTS DE VISTAS ---
 
             // WELCOME
             const renderWelcomePage = () => (
@@ -272,7 +284,7 @@
                             </div>
                         </div>
 
-                        <label className="block text-xs font-semibold text-gray-600 mb-1">Tu Email (Identificador de usuario) *</label>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Tu Email *</label>
                         <input
                             type="email"
                             placeholder="ejemplo@email.com"
@@ -304,6 +316,9 @@
 
                                     const saved = localStorage.getItem(`lapostaCart_${cleanEmail}`);
                                     if (saved) setSavedCart(JSON.parse(saved));
+
+                                    const savedOrder = localStorage.getItem(`lapostaLastOrder_${cleanEmail}`);
+                                    if (savedOrder) setLastOrder(JSON.parse(savedOrder));
 
                                     setCurrentPage('membership');
                                 }
@@ -377,7 +392,7 @@
                 </div>
             );
 
-            // HOME
+            // HOME (Catálogo con selector de cantidades directo)
             const renderHomePage = () => (
                 <div className="min-h-screen bg-gray-50 pb-20">
                     <div className="bg-amber-700 text-white p-4 sticky top-0 z-10">
@@ -437,32 +452,37 @@
                         }).map(([category, items]) => (
                             <div key={category}>
                                 <h3 className="text-lg font-bold text-gray-800 mb-3">{category}</h3>
-                                <div className="space-y-2">
+                                <div className="space-y-3">
                                     {items.map(product => {
                                         const inCart = cart.find(p => p.id === product.id);
-                                        const qty = inCart ? (inCart.quantity || 1) : 1;
-                                        const pricePerUnit = calculatePrice(product, qty);
+                                        const qty = inCart ? (inCart.quantity || 1) : 0;
+                                        const pricePerUnit = calculatePrice(product, qty || 1);
                                         const originalPrice = product.price;
                                         const discountPercent = hasMembership ? 10 : 0;
                                         
                                         return (
                                             <div
                                                 key={product.id}
-                                                className="bg-white p-4 rounded-lg border border-gray-200 hover:shadow-md transition cursor-pointer"
-                                                onClick={() => setCurrentPage(`product-${product.id}`)}
+                                                className="bg-white p-4 rounded-lg border border-gray-200 hover:shadow-md transition"
                                             >
-                                                <div className="flex justify-between items-start gap-3">
+                                                <div 
+                                                    className="flex justify-between items-start gap-3 cursor-pointer"
+                                                    onClick={() => setCurrentPage(`product-${product.id}`)}
+                                                >
                                                     <div className="flex-1">
-                                                        <p className="text-2xl mb-1">{product.image}</p>
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            <span className="text-2xl">{product.image}</span>
+                                                            <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-semibold">{product.brand}</span>
+                                                        </div>
                                                         <p className="font-semibold text-gray-800">{product.name}</p>
                                                         <div className="flex items-center gap-2 mt-1">
                                                             {product.certified && (
-                                                                <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
+                                                                <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">
                                                                     ✓ Sin TACC
                                                                 </span>
                                                             )}
                                                             {discountPercent > 0 && (
-                                                                <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded font-semibold">
+                                                                <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded font-semibold">
                                                                     -{discountPercent}%
                                                                 </span>
                                                             )}
@@ -476,33 +496,40 @@
                                                         <p className="text-xs text-gray-600 mt-1">Stock: {product.stock}</p>
                                                     </div>
                                                 </div>
-                                                <div className="mt-3 flex gap-2">
+
+                                                {/* SECTOR DE CANTIDADES DIRECTO EN CATÁLOGO */}
+                                                <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between gap-2">
                                                     <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            if (!inCart && product.stock > 0) {
-                                                                handleAddToCart(product);
-                                                            } else if (inCart) {
-                                                                setCart(cart.filter(p => p.id !== product.id));
-                                                            }
-                                                        }}
-                                                        className={`flex-1 py-2 rounded font-semibold text-sm transition ${
-                                                            inCart 
-                                                                ? 'bg-red-100 text-red-700 hover:bg-red-200' 
-                                                                : 'bg-amber-100 text-amber-700 hover:bg-amber-200'
-                                                        }`}
+                                                        onClick={() => setCurrentPage(`product-${product.id}`)}
+                                                        className="text-xs text-gray-500 hover:text-amber-700 underline"
                                                     >
-                                                        {inCart ? '✓ En carrito' : '+ Agregar'}
+                                                        Ver info
                                                     </button>
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setCurrentPage(`product-${product.id}`);
-                                                        }}
-                                                        className="px-4 py-2 rounded font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200"
-                                                    >
-                                                        Info
-                                                    </button>
+
+                                                    {qty === 0 ? (
+                                                        <button
+                                                            onClick={() => updateProductQuantity(product, 1)}
+                                                            className="bg-amber-700 text-white px-4 py-1.5 rounded-lg font-semibold text-sm hover:bg-amber-800 transition"
+                                                        >
+                                                            + Agregar
+                                                        </button>
+                                                    ) : (
+                                                        <div className="flex items-center gap-2 bg-amber-50 p-1 rounded-lg border border-amber-200">
+                                                            <button
+                                                                onClick={() => updateProductQuantity(product, qty - 1)}
+                                                                className="w-7 h-7 bg-white text-amber-800 rounded font-bold shadow-sm flex items-center justify-center hover:bg-amber-100"
+                                                            >
+                                                                −
+                                                            </button>
+                                                            <span className="text-sm font-bold text-amber-900 min-w-[20px] text-center">{qty}</span>
+                                                            <button
+                                                                onClick={() => updateProductQuantity(product, qty + 1)}
+                                                                className="w-7 h-7 bg-amber-700 text-white rounded font-bold shadow-sm flex items-center justify-center hover:bg-amber-800"
+                                                            >
+                                                                +
+                                                            </button>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         );
@@ -533,12 +560,106 @@
                             <span className="text-xs">Carrito</span>
                         </button>
                         <button
+                            onClick={() => setCurrentPage('profile')}
+                            className="flex flex-col items-center gap-1 text-gray-500 font-semibold hover:text-amber-700"
+                        >
+                            <span className="text-2xl">👤</span>
+                            <span className="text-xs">Perfil</span>
+                        </button>
+                        <button
                             onClick={() => setCurrentPage('community')}
                             className="flex flex-col items-center gap-1 text-gray-500 font-semibold"
                         >
                             <span className="text-2xl">👥</span>
                             <span className="text-xs">Comunidad</span>
                         </button>
+                    </div>
+                </div>
+            );
+
+            // USER PROFILE (NUEVA SECCIÓN REQUERIDA POR TUTOR)
+            const renderProfilePage = () => (
+                <div className="min-h-screen bg-gray-50 pb-20">
+                    <div className="bg-amber-700 text-white p-4">
+                        <button onClick={() => setCurrentPage('home')} className="text-amber-100 mb-2">← Volver al inicio</button>
+                        <h1 className="text-2xl font-bold">Mi Perfil</h1>
+                    </div>
+
+                    <div className="p-4 space-y-4 max-w-md mx-auto">
+                        {/* DATOS PERSONALES */}
+                        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                            <h3 className="font-bold text-gray-800 text-lg mb-2">📋 Mis Datos</h3>
+                            <div className="text-sm space-y-1 text-gray-600">
+                                <p><strong className="text-gray-800">Nombre:</strong> {userName || 'Cliente La Posta'}</p>
+                                <p><strong className="text-gray-800">Email:</strong> {userEmail}</p>
+                                <p><strong className="text-gray-800">Membresía:</strong> {hasMembership ? '✨ Activa (10% Desc + Envío Gratis)' : 'Estándar'}</p>
+                            </div>
+                        </div>
+
+                        {/* ÚLTIMA COMPRA Y REPETIR PEDIDO */}
+                        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                            <h3 className="font-bold text-gray-800 text-lg mb-3">📦 Última Compra</h3>
+                            {lastOrder ? (
+                                <div className="space-y-3">
+                                    <div className="bg-amber-50 p-3 rounded border border-amber-200">
+                                        <div className="flex justify-between text-xs text-amber-900 mb-2">
+                                            <span><strong>Pedido:</strong> {lastOrder.orderNumber}</span>
+                                            <span>{lastOrder.date}</span>
+                                        </div>
+                                        <ul className="text-sm space-y-1 text-gray-700">
+                                            {lastOrder.items.map((it, idx) => (
+                                                <li key={idx} className="flex justify-between">
+                                                    <span>{it.image} {it.name} (x{it.quantity})</span>
+                                                    <span>${calculatePrice(it, it.quantity) * it.quantity}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                        <div className="border-t border-amber-200 mt-2 pt-2 flex justify-between font-bold text-amber-900 text-sm">
+                                            <span>Total pagado:</span>
+                                            <span>${lastOrder.total}</span>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => {
+                                            setCart(lastOrder.items);
+                                            setCurrentPage('cart');
+                                        }}
+                                        className="w-full bg-amber-700 text-white py-2 rounded-lg font-semibold text-sm hover:bg-amber-800 transition"
+                                    >
+                                        🔄 Repetir este pedido
+                                    </button>
+                                </div>
+                            ) : (
+                                <p className="text-sm text-gray-500 italic">Todavía no realizaste ninguna compra.</p>
+                            )}
+                        </div>
+
+                        {/* COMPRAS RECURRENTES / MARCAS FAVORITAS */}
+                        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                            <h3 className="font-bold text-gray-800 text-lg mb-2">⭐ Productos Recurrentes</h3>
+                            <p className="text-xs text-gray-500 mb-3">Tus marcas y productos habituales sin TACC:</p>
+                            
+                            <div className="space-y-2">
+                                {products.panificados.slice(0, 2).concat(products.harinas.slice(0, 1)).map(prod => (
+                                    <div key={prod.id} className="flex items-center justify-between p-2 bg-gray-50 rounded border border-gray-100">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xl">{prod.image}</span>
+                                            <div>
+                                                <p className="text-xs font-bold text-amber-800">{prod.brand}</p>
+                                                <p className="text-xs font-semibold text-gray-800">{prod.name}</p>
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={() => updateProductQuantity(prod, 1)}
+                                            className="bg-amber-100 text-amber-800 text-xs px-3 py-1 rounded font-bold hover:bg-amber-200"
+                                        >
+                                            + Pedir
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
                         <button
                             onClick={() => {
                                 setCurrentPage('welcome');
@@ -548,10 +669,28 @@
                                 localStorage.removeItem('lapostaUser');
                                 localStorage.removeItem('lapostaUserName');
                             }}
-                            className="flex flex-col items-center gap-1 text-gray-500 font-semibold"
+                            className="w-full bg-red-100 text-red-700 py-3 rounded-lg font-semibold text-sm hover:bg-red-200 transition mt-4"
                         >
-                            <span className="text-2xl">🚪</span>
-                            <span className="text-xs">Salir</span>
+                            Cerrar Sesión
+                        </button>
+                    </div>
+
+                    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around p-3 z-20">
+                        <button onClick={() => setCurrentPage('home')} className="flex flex-col items-center gap-1 text-gray-500 font-semibold">
+                            <span className="text-2xl">🏠</span>
+                            <span className="text-xs">Inicio</span>
+                        </button>
+                        <button onClick={() => setCurrentPage('cart')} className="flex flex-col items-center gap-1 text-gray-500 font-semibold relative">
+                            <span className="text-2xl">🛒</span>
+                            <span className="text-xs">Carrito</span>
+                        </button>
+                        <button onClick={() => setCurrentPage('profile')} className="flex flex-col items-center gap-1 text-amber-700 font-semibold">
+                            <span className="text-2xl">👤</span>
+                            <span className="text-xs">Perfil</span>
+                        </button>
+                        <button onClick={() => setCurrentPage('community')} className="flex flex-col items-center gap-1 text-gray-500 font-semibold">
+                            <span className="text-2xl">👥</span>
+                            <span className="text-xs">Comunidad</span>
                         </button>
                     </div>
                 </div>
@@ -577,7 +716,8 @@
 
                         <div className="p-6 max-w-md mx-auto">
                             <div className="text-6xl mb-4 text-center">{product.image}</div>
-                            <h1 className="text-2xl font-bold text-gray-800 mb-4">{product.name}</h1>
+                            <span className="bg-amber-100 text-amber-800 text-xs px-3 py-1 rounded-full font-bold">{product.brand}</span>
+                            <h1 className="text-2xl font-bold text-gray-800 my-2">{product.name}</h1>
 
                             <div className="bg-green-50 border-l-4 border-green-500 p-4 mb-6 rounded">
                                 <p className="font-semibold text-green-900 mb-2">✓ Seguridad garantizada</p>
@@ -591,31 +731,14 @@
                             <div className="bg-white p-4 rounded-lg mb-6 shadow-sm">
                                 <p className="text-sm text-gray-600 mb-2">Precio unitario:</p>
                                 <p className="text-3xl font-bold text-amber-700">${pricePerUnit}</p>
-                                {hasMembership && (
-                                    <div className="mt-2 p-2 bg-amber-50 rounded">
-                                        <p className="text-xs text-amber-700">
-                                            <span className="line-through text-gray-500">${product.price}</span> (Miembro: -10%)
-                                        </p>
-                                    </div>
-                                )}
                             </div>
 
                             <button
-                                onClick={() => {
-                                    if (!inCart && product.stock > 0) {
-                                        handleAddToCart(product);
-                                    }
-                                }}
-                                disabled={product.stock === 0 || inCart}
-                                className={`w-full py-3 rounded-lg font-semibold text-white mb-4 ${
-                                    inCart 
-                                        ? 'bg-gray-400 cursor-not-allowed' 
-                                        : product.stock > 0 
-                                        ? 'bg-amber-700 hover:bg-amber-800' 
-                                        : 'bg-gray-400 cursor-not-allowed'
-                                }`}
+                                onClick={() => updateProductQuantity(product, qty + 1)}
+                                disabled={product.stock === 0}
+                                className="w-full py-3 rounded-lg font-semibold text-white bg-amber-700 hover:bg-amber-800"
                             >
-                                {inCart ? '✓ En carrito' : product.stock > 0 ? 'Agregar al carrito' : 'Sin stock'}
+                                + Agregar al carrito
                             </button>
                         </div>
                     </div>
@@ -648,7 +771,7 @@
                         ) : (
                             <div className="p-4 space-y-4 max-w-md mx-auto">
                                 <div className="bg-amber-50 border-l-4 border-amber-600 p-3 rounded text-amber-900 text-xs font-medium">
-                                    ⏱️ <strong>Tiempo de preparación:</strong> Los pedidos se arman a pedido y requieren un mínimo de <strong>3 días hábiles</strong> antes de poder ser entregados.
+                                    ⏱️ <strong>Tiempo de preparación:</strong> Mínimo <strong>3 días hábiles</strong> de preparación.
                                 </div>
 
                                 {cart.map((item, idx) => {
@@ -660,6 +783,7 @@
                                         <div key={idx} className="bg-white p-4 rounded-lg shadow-sm">
                                             <div className="flex justify-between items-start mb-2">
                                                 <div>
+                                                    <p className="text-xs text-amber-800 font-bold">{item.brand}</p>
                                                     <p className="text-lg font-semibold">{item.image} {item.name}</p>
                                                     <p className="text-sm text-gray-600">${pricePerUnit} x {qty} = ${itemTotal}</p>
                                                 </div>
@@ -673,22 +797,14 @@
                                             
                                             <div className="flex items-center gap-2 mt-2">
                                                 <button
-                                                    onClick={() => {
-                                                        const newCart = [...cart];
-                                                        newCart[idx].quantity = Math.max(1, (newCart[idx].quantity || 1) - 1);
-                                                        setCart(newCart);
-                                                    }}
+                                                    onClick={() => updateProductQuantity(item, qty - 1)}
                                                     className="px-3 py-1 bg-gray-200 rounded font-bold"
                                                 >
                                                     −
                                                 </button>
                                                 <span className="text-sm font-semibold">{qty}</span>
                                                 <button
-                                                    onClick={() => {
-                                                        const newCart = [...cart];
-                                                        newCart[idx].quantity = (newCart[idx].quantity || 1) + 1;
-                                                        setCart(newCart);
-                                                    }}
+                                                    onClick={() => updateProductQuantity(item, qty + 1)}
                                                     className="px-3 py-1 bg-gray-200 rounded font-bold"
                                                 >
                                                     +
@@ -731,19 +847,6 @@
                                     >
                                         Proceder al pago
                                     </button>
-                                    <button
-                                        onClick={() => {
-                                            localStorage.setItem(`lapostaCart_${userEmail}`, JSON.stringify({
-                                                items: cart,
-                                                savedAt: new Date().toISOString()
-                                            }));
-                                            setSavedCart({ items: cart });
-                                            alert(`✓ Canasta guardada para el correo ${userEmail}`);
-                                        }}
-                                        className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700"
-                                    >
-                                        Guardar para próximo mes
-                                    </button>
                                 </div>
                             </div>
                         )}
@@ -756,6 +859,13 @@
                 const { subtotal, total, shipping } = calculateCartTotal();
 
                 if (orderPlaced) {
+                    const orderData = {
+                        orderNumber: generatedOrderNumber,
+                        date: new Date().toLocaleDateString('es-AR'),
+                        items: cart,
+                        total: total
+                    };
+
                     return (
                         <div className="min-h-screen bg-gradient-to-b from-green-50 to-green-100 p-6 flex flex-col justify-center items-center">
                             <div className="text-6xl mb-4">✓</div>
@@ -798,48 +908,21 @@
                                             )}
                                         </div>
                                     </div>
-                                    <div className="flex items-start gap-3">
-                                        <span className="text-xl">💳</span>
-                                        <div>
-                                            <p className="font-semibold">Medio de Pago</p>
-                                            <p className="text-gray-600 capitalize">
-                                                {paymentMethod === 'credit' && 'Tarjeta de Crédito'}
-                                                {paymentMethod === 'debit' && 'Tarjeta de Débito'}
-                                                {paymentMethod === 'mercadopago' && 'Mercado Pago'}
-                                                {paymentMethod === 'transfer' && 'Transferencia Bancaria (Pendiente)'}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="bg-gray-50 p-3 rounded border border-gray-200">
-                                    <p className="text-xs font-semibold text-gray-700 mb-2">Resumen de costos:</p>
-                                    <div className="space-y-1 text-xs">
-                                        <div className="flex justify-between">
-                                            <span>Subtotal:</span>
-                                            <span>${subtotal}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span>Envío:</span>
-                                            <span>${shipping}</span>
-                                        </div>
-                                        <div className="flex justify-between font-bold border-t pt-1 mt-1">
-                                            <span>Total a abonar:</span>
-                                            <span>${total}</span>
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
 
                             <div className="w-full space-y-2 max-w-md">
+                                {/* TEXTO ACTUALIZADO: 5 min aprox. */}
                                 <button
                                     onClick={() => window.open('https://form.typeform.com/to/YVsFpl4n', '_blank')}
                                     className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 shadow"
                                 >
-                                    Completar formulario de feedback (5 min)
+                                    Completar formulario de feedback (5 min aprox.)
                                 </button>
                                 <button
                                     onClick={() => {
+                                        setLastOrder(orderData);
+                                        localStorage.setItem(`lapostaLastOrder_${userEmail}`, JSON.stringify(orderData));
                                         setCart([]);
                                         setOrderPlaced(false);
                                         setCurrentPage('home');
@@ -880,7 +963,7 @@
                                     <label className="block text-xs font-semibold text-gray-600 mb-1">Aclaraciones para el delivery (opcional)</label>
                                     <input
                                         type="text"
-                                        placeholder="Ej: Tocar timbre, casa verde, portón negro..."
+                                        placeholder="Ej: Tocar timbre, casa verde..."
                                         value={deliveryNotes}
                                         onChange={(e) => setDeliveryNotes(e.target.value)}
                                         className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm"
@@ -946,7 +1029,7 @@
 
                                 {paymentMethod === 'transfer' && (
                                     <div className="bg-amber-100 border-l-4 border-amber-600 p-3 rounded text-amber-900 text-xs mt-3 leading-relaxed">
-                                        ⚠️ <strong>Importante:</strong> Al finalizar el pedido recibirás en tu correo los datos bancarios. Tenés un plazo máximo de <strong>12 horas</strong> para realizar la transferencia, de lo contrario la compra será cancelada.
+                                        ⚠️ <strong>Importante:</strong> Plazo máximo de <strong>12 horas</strong> para transferir.
                                     </div>
                                 )}
                             </div>
@@ -961,10 +1044,6 @@
                             <button
                                 onClick={() => {
                                     if (address) {
-                                        localStorage.setItem(`lapostaCart_${userEmail}`, JSON.stringify({
-                                            items: cart,
-                                            savedAt: new Date().toISOString()
-                                        }));
                                         setGeneratedOrderNumber(generateOrderNumber());
                                         setOrderPlaced(true);
                                     } else {
@@ -1001,19 +1080,18 @@
                 </div>
             );
 
-            // COMPONENTE PRINCIPAL QUE ENVUELVE LAS VISTAS Y LA NOTIFICACIÓN
             return (
                 <div className="relative min-h-screen">
-                    {/* Renderizado de la página actual */}
                     {currentPage === 'welcome' && renderWelcomePage()}
                     {currentPage === 'membership' && renderMembershipPage()}
                     {currentPage === 'home' && renderHomePage()}
+                    {currentPage === 'profile' && renderProfilePage()}
                     {currentPage.startsWith('product-') && renderProductPage(currentPage.replace('product-', ''))}
                     {currentPage === 'cart' && renderCartPage()}
                     {currentPage === 'checkout' && renderCheckoutPage()}
                     {currentPage === 'community' && renderCommunityPage()}
 
-                    {/* BANNER NOTIFICACIÓN FLOTANTE (PRODUCTO AGREGADO) */}
+                    {/* POP UP FLOTANTE DURACIÓN 6 SEG */}
                     {addedNotification && (
                         <div className="fixed bottom-16 left-0 right-0 px-4 z-50 animate-slide-up max-w-md mx-auto">
                             <div className="bg-gray-900 text-white p-4 rounded-xl shadow-2xl flex items-center justify-between gap-3 border border-gray-700">
