@@ -108,29 +108,79 @@
 
             const allProducts = Object.values(products).flat();
 
-            // Recetas de la Comunidad
+            // Recetas de la Comunidad con pasos e ingredientes completos
             const communityRecipes = [
                 {
                     id: 'rec1',
                     title: '🥣 Bowl tibio de quinoa y vegetales',
+                    image: '🥗',
                     time: '25 minutos',
                     servings: '2 porciones',
                     ingredients: [
-                        { text: '1 taza de quinoa (500g)', productId: 'a1' },
-                        { text: '1 zucchini fresco', productId: 'f4' },
-                        { text: '2 cucharadas de aceite de oliva', productId: 'a3' }
-                    ]
+                        { text: '1 taza de quinoa', productId: 'a1' },
+                        { text: '1 zucchini', productId: 'f4' },
+                        { text: '1 zanahoria' },
+                        { text: '½ morrón rojo' },
+                        { text: '½ cebolla morada' },
+                        { text: '1 puñado de espinaca fresca' },
+                        { text: '2 cucharadas de aceite de oliva', productId: 'a3' },
+                        { text: 'Jugo de ½ limón' },
+                        { text: 'Sal, pimienta y pimentón ahumado' }
+                    ],
+                    steps: [
+                        'Lavar bien la quinoa y cocinarla según las indicaciones del paquete.',
+                        'Cortar los vegetales en cubos y saltearlos con aceite de oliva.',
+                        'Agregar la espinaca hasta que se marchite.',
+                        'Mezclar los vegetales con la quinoa.',
+                        'Condimentar con limón, sal, pimienta y pimentón.'
+                    ],
+                    tip: 'Podés sumar pollo grillado, queso o garbanzos para aumentar el aporte de proteínas.'
                 },
                 {
                     id: 'rec2',
                     title: '🥞 Panqueques de banana y avena sin TACC',
+                    image: '🥞',
                     time: '15 minutos',
                     servings: '2 porciones',
                     ingredients: [
                         { text: '2 bananas maduras', productId: 'f2' },
-                        { text: '2 huevos de campo', productId: 'f1' },
-                        { text: '1 taza de avena certificada sin TACC', productId: 'a2' }
-                    ]
+                        { text: '2 huevos', productId: 'f1' },
+                        { text: '1 taza de avena certificada sin TACC', productId: 'a2' },
+                        { text: '1 cucharadita de polvo para hornear sin TACC' },
+                        { text: '1 cucharadita de esencia de vainilla' },
+                        { text: 'Canela (opcional)' }
+                    ],
+                    steps: [
+                        'Licuar todos los ingredientes hasta obtener una mezcla homogénea.',
+                        'Calentar una sartén antiadherente apenas aceitada.',
+                        'Cocinar pequeñas porciones durante 2 minutos por lado.',
+                        'Servir con frutas frescas, miel o pasta de maní.'
+                    ],
+                    tip: 'Ideal para desayuno, merienda o vianda escolar.'
+                },
+                {
+                    id: 'rec3',
+                    title: '🍗 Pollo al horno con papas y romero',
+                    image: '🍗',
+                    time: '45 minutos',
+                    servings: '4 porciones',
+                    ingredients: [
+                        { text: '4 supremas o patas-muslos de pollo', productId: 'f5' },
+                        { text: '4 papas medianas', productId: 'f3' },
+                        { text: '2 cucharadas de aceite de oliva', productId: 'a3' },
+                        { text: 'Romero fresco o seco' },
+                        { text: 'Ajo picado' },
+                        { text: 'Sal y pimienta' },
+                        { text: 'Jugo de 1 limón' }
+                    ],
+                    steps: [
+                        'Precalentar el horno a 200 °C.',
+                        'Cortar las papas en gajos.',
+                        'Colocar el pollo y las papas en una fuente.',
+                        'Agregar aceite, ajo, romero, limón, sal y pimienta.',
+                        'Hornear entre 40 y 45 minutos, dando vuelta el pollo a mitad de cocción.'
+                    ],
+                    tip: 'Acompañar con una ensalada de hojas verdes y tomates para un plato completo.'
                 }
             ];
 
@@ -204,33 +254,13 @@
                     const updated = [...cart];
                     updated[existingIndex].quantity = newQty;
                     setCart(updated);
+                    if (newQty > (cart[existingIndex].quantity || 0)) {
+                        setAddedNotification({ ...product, quantity: newQty });
+                    }
                 } else {
                     setCart([...cart, { ...product, quantity: newQty, cartId: Math.random() }]);
                     setAddedNotification({ ...product, quantity: newQty });
                 }
-            };
-
-            const addAllRecipeIngredients = (recipe) => {
-                let currentCart = [...cart];
-                let addedCount = 0;
-
-                recipe.ingredients.forEach(ing => {
-                    if (ing.productId) {
-                        const prod = allProducts.find(p => p.id === ing.productId);
-                        if (prod) {
-                            const existingIndex = currentCart.findIndex(p => p.id === prod.id);
-                            if (existingIndex >= 0) {
-                                currentCart[existingIndex].quantity = (currentCart[existingIndex].quantity || 1) + 1;
-                            } else {
-                                currentCart.push({ ...prod, quantity: 1, cartId: Math.random() });
-                            }
-                            addedCount++;
-                        }
-                    }
-                });
-
-                setCart(currentCart);
-                alert(`¡Se agregaron ${addedCount} ingredientes de "${recipe.title}" al carrito!`);
             };
 
             const handleLogout = () => {
@@ -912,7 +942,7 @@
                 );
             };
 
-            // 8. COMMUNITY (CON RECETAS, RESTAURANTES Y BLOG/FEEDBACK)
+            // 8. COMMUNITY (RECETAS LECTURA + EXPERIENCIA DE AGREGADO DE CATÁLOGO)
             const renderCommunityPage = () => (
                 <div className="min-h-screen bg-gray-50 pb-20">
                     <div className="bg-amber-700 text-white p-4 sticky top-0 z-10 shadow">
@@ -923,46 +953,105 @@
                         </div>
                     </div>
 
-                    <div className="p-4 space-y-5 max-w-md mx-auto">
+                    <div className="p-4 space-y-6 max-w-md mx-auto">
                         <div className="bg-purple-50 border-l-4 border-purple-600 p-3 rounded-xl text-xs text-purple-900 leading-relaxed">
-                            🍳 <strong>Recetas Interactivas:</strong> Cargá todos los ingredientes de la receta directamente a tu carrito.
+                            🍳 <strong>Recetas Interactivas:</strong> Leé las instrucciones paso a paso y agregá los ingredientes disponibles directo a tu carrito con la misma experiencia del catálogo.
                         </div>
 
-                        {/* SECCIÓN 1: RECETAS */}
-                        <div className="space-y-4">
+                        {/* SECCIÓN 1: RECETAS COMPLETAS Y EDITABLES */}
+                        <div className="space-y-6">
                             <h2 className="text-md font-bold text-gray-800">📖 Recetas Saludables y Rápidas</h2>
+                            
                             {communityRecipes.map(recipe => (
-                                <div key={recipe.id} className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-3">
-                                    <div className="border-b pb-2">
-                                        <h3 className="font-bold text-gray-800 text-sm">{recipe.title}</h3>
-                                        <p className="text-[11px] text-gray-500 mt-0.5">⏱️ {recipe.time} | 🍽️ {recipe.servings}</p>
+                                <div key={recipe.id} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden space-y-4 p-4">
+                                    {/* Encabezado e Imagen de Receta */}
+                                    <div className="flex items-center gap-3 border-b pb-3">
+                                        <span className="text-4xl p-2 bg-amber-50 rounded-xl border border-amber-100 flex-shrink-0">{recipe.image}</span>
+                                        <div>
+                                            <h3 className="font-bold text-gray-800 text-sm">{recipe.title}</h3>
+                                            <div className="flex gap-2 text-[11px] text-gray-500 mt-1 font-medium">
+                                                <span>⏱️ {recipe.time}</span>
+                                                <span>•</span>
+                                                <span>🍽️ {recipe.servings}</span>
+                                            </div>
+                                        </div>
                                     </div>
 
+                                    {/* Ingredientes con Interacción idéntica al Catálogo */}
                                     <div>
-                                        <p className="text-xs font-bold text-amber-800 mb-1.5">Ingredientes requeridos:</p>
-                                        <ul className="text-xs space-y-1.5 text-gray-600">
+                                        <p className="text-xs font-bold text-amber-900 mb-2 flex items-center gap-1">
+                                            🛒 Ingredientes y Disponibilidad:
+                                        </p>
+                                        <div className="space-y-2">
                                             {recipe.ingredients.map((ing, i) => {
-                                                const prod = ing.productId ? allProducts.find(p => p.id === ing.productId) : null;
+                                                const product = ing.productId ? allProducts.find(p => p.id === ing.productId) : null;
+                                                const inCart = product ? cart.find(p => p.id === product.id) : null;
+                                                const qty = inCart ? (inCart.quantity || 1) : 0;
+                                                const pricePerUnit = product ? calculatePrice(product, qty || 1) : 0;
+
                                                 return (
-                                                    <li key={i} className="flex justify-between items-center bg-gray-50 p-1.5 rounded">
-                                                        <span>• {ing.text}</span>
-                                                        {prod && (
-                                                            <span className="text-[10px] bg-green-100 text-green-800 font-bold px-1.5 py-0.5 rounded">
-                                                                Disponible (${calculatePrice(prod)})
+                                                    <div key={i} className="flex items-center justify-between p-2.5 bg-gray-50 rounded-lg border border-gray-100 text-xs">
+                                                        <div className="flex items-center gap-2 pr-2">
+                                                            <span>•</span>
+                                                            <span className="text-gray-800 font-medium">{ing.text}</span>
+                                                        </div>
+
+                                                        {product ? (
+                                                            <div className="flex items-center gap-2 flex-shrink-0">
+                                                                <span className="text-xs font-bold text-amber-700">${pricePerUnit}</span>
+                                                                {qty === 0 ? (
+                                                                    <button
+                                                                        onClick={() => updateProductQuantity(product, 1)}
+                                                                        className="bg-amber-700 text-white px-2.5 py-1 rounded-lg text-[11px] font-bold hover:bg-amber-800 transition shadow-xs"
+                                                                    >
+                                                                        + Agregar
+                                                                    </button>
+                                                                ) : (
+                                                                    <div className="flex items-center gap-1 bg-amber-100 p-0.5 rounded border border-amber-300">
+                                                                        <button
+                                                                            onClick={() => updateProductQuantity(product, qty - 1)}
+                                                                            className="w-5 h-5 bg-white text-amber-800 rounded font-bold shadow-xs flex items-center justify-center text-[10px]"
+                                                                        >
+                                                                            −
+                                                                        </button>
+                                                                        <span className="text-xs font-bold text-amber-900 min-w-[14px] text-center">{qty}</span>
+                                                                        <button
+                                                                            onClick={() => updateProductQuantity(product, qty + 1)}
+                                                                            className="w-5 h-5 bg-amber-700 text-white rounded font-bold shadow-xs flex items-center justify-center text-[10px]"
+                                                                        >
+                                                                            +
+                                                                        </button>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-[10px] text-gray-400 italic bg-gray-100 px-2 py-0.5 rounded flex-shrink-0">
+                                                                En casa / Condimento
                                                             </span>
                                                         )}
-                                                    </li>
+                                                    </div>
                                                 );
                                             })}
-                                        </ul>
+                                        </div>
                                     </div>
 
-                                    <button
-                                        onClick={() => addAllRecipeIngredients(recipe)}
-                                        className="w-full bg-amber-700 hover:bg-amber-800 text-white py-2.5 rounded-lg text-xs font-bold transition shadow"
-                                    >
-                                        🛒 Cargar ingredientes al carrito
-                                    </button>
+                                    {/* Pasos de Preparación */}
+                                    <div className="bg-amber-50/50 p-3 rounded-lg border border-amber-100 space-y-2">
+                                        <p className="text-xs font-bold text-amber-950 flex items-center gap-1">
+                                            👨‍🍳 Preparación Paso a Paso:
+                                        </p>
+                                        <ol className="text-xs space-y-1.5 text-gray-700 list-decimal pl-4">
+                                            {recipe.steps.map((step, sIdx) => (
+                                                <li key={sIdx} className="pl-1 leading-relaxed">{step}</li>
+                                            ))}
+                                        </ol>
+                                    </div>
+
+                                    {/* Tip / Consejo */}
+                                    <div className="bg-green-50 p-2.5 rounded-lg border border-green-200 text-xs text-green-900 flex items-start gap-1.5">
+                                        <span>💚</span>
+                                        <p><strong>Tip:</strong> {recipe.tip}</p>
+                                    </div>
                                 </div>
                             ))}
                         </div>
