@@ -51,6 +51,9 @@
             const [selectedDeliveryDate, setSelectedDeliveryDate] = useState('');
             const [selectedTimeSlot, setSelectedTimeSlot] = useState('09:00 - 13:00');
             const [deliveryNotes, setDeliveryNotes] = useState('');
+            
+            // Estado obligatorio para requerir la encuesta antes de volver al inicio
+            const [surveyCompleted, setSurveyCompleted] = useState(false);
 
             // Notificación flotante dura 6 segundos
             useEffect(() => {
@@ -810,23 +813,42 @@
                                 )}
                             </div>
 
+                            <div className="w-full bg-blue-50 border border-blue-200 p-3 rounded-xl mb-3 text-center space-y-2">
+                                <p className="text-xs font-bold text-blue-900">
+                                    {surveyCompleted 
+                                        ? "✅ ¡Muchas gracias por responder la encuesta!" 
+                                        : "⚠️ Por favor, completá la encuesta para habilitar el botón de retorno."}
+                                </p>
+                                <button
+                                    onClick={() => {
+                                        window.open('https://form.typeform.com/to/YVsFpl4n', '_blank');
+                                        setSurveyCompleted(true);
+                                    }}
+                                    className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold text-xs shadow hover:bg-blue-700 transition"
+                                >
+                                    📋 {surveyCompleted ? "Completar encuesta nuevamente" : "Completar Encuesta de Opinión (Obligatorio)"}
+                                </button>
+                            </div>
+
                             <button
-                                onClick={() => window.open('https://form.typeform.com/to/YVsFpl4n', '_blank')}
-                                className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold text-xs mb-2 shadow"
-                            >
-                                📋 Completar Encuesta de Opinión (5 min)
-                            </button>
-                            <button
+                                disabled={!surveyCompleted}
                                 onClick={() => {
-                                    setLastOrder(orderData);
-                                    localStorage.setItem(`lapostaLastOrder_${userEmail}`, JSON.stringify(orderData));
-                                    setCart([]);
-                                    setOrderPlaced(false);
-                                    setCurrentPage('home');
+                                    if (surveyCompleted) {
+                                        setLastOrder(orderData);
+                                        localStorage.setItem(`lapostaLastOrder_${userEmail}`, JSON.stringify(orderData));
+                                        setCart([]);
+                                        setOrderPlaced(false);
+                                        setSurveyCompleted(false);
+                                        setCurrentPage('home');
+                                    }
                                 }}
-                                className="w-full bg-amber-700 text-white py-3 rounded-lg font-bold text-xs"
+                                className={`w-full py-3 rounded-lg font-bold text-xs transition ${
+                                    surveyCompleted 
+                                        ? "bg-amber-700 text-white hover:bg-amber-800 shadow" 
+                                        : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                                }`}
                             >
-                                Volver al inicio
+                                {surveyCompleted ? "Volver al inicio" : "🔒 Volver al inicio (Encuesta requerida)"}
                             </button>
                         </div>
                     );
@@ -930,6 +952,7 @@
                                     if (address) {
                                         const num = generateOrderNumber();
                                         setGeneratedOrderNumber(num);
+                                        setSurveyCompleted(false);
                                         setOrderPlaced(true);
                                     } else alert('Por favor ingresá tu dirección');
                                 }}
