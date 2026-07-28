@@ -1,0 +1,23 @@
+{
+  "name": "la-posta-mvp",
+  "version": "1.0.0",
+  "description": "La Posta MVP - E-commerce platform for gluten-free products",
+  "main": "index.html",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CabreraGuaS/la-posta-mvp-.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/CabreraGuaS/la-posta-mvp-/issues"
+  },
+  "homepage": "https://github.com/CabreraGuaS/la-posta-mvp-#readme",
+  "dependencies": {
+    "@vercel/analytics": "^2.0.1"
+  }
+}
