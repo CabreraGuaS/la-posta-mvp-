@@ -3,49 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>La Posta - MVP</title>
+    <title>La Posta - MVP Integrado</title>
     <!-- React 18 & ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Babel Standalone -->
+    <!-- Babel Standalone para transformar JSX -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background-color: #FCFBFB;
-        }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #F9FAFB; }
+        
         @keyframes slideUp {
             from { transform: translateY(100%); opacity: 0; }
             to { transform: translateY(0); opacity: 1; }
         }
-        .animate-slide-up { animation: slideUp 0.3s ease-out forwards; }
+        .animate-slide-up {
+            animation: slideUp 0.3s ease-out forwards;
+        }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        
-        /* Cherrypick Palette */
-        .text-cp-green { color: #0E472A; }
-        .bg-cp-green { background-color: #0E472A; }
-        .bg-cp-yellow { background-color: #E2FF33; }
-        .bg-cp-blue { background-color: #D3F3FA; }
-        .text-cp-purple { color: #511C3D; }
-        .border-cp-purple { border-color: #8C4B78; }
-        .bg-cp-purple-light { background-color: #F8F0F6; }
     </style>
 </head>
-<body>
+<body class="bg-gray-100">
     <div id="root"></div>
 
     <script type="text/babel">
         const { useState, useEffect } = React;
 
         const LaPostaMVP = () => {
-            const [currentPage, setCurrentPage] = useState('home');
+            const [currentPage, setCurrentPage] = useState('welcome');
             const [cart, setCart] = useState([]);
+            const [savedCart, setSavedCart] = useState(null);
+            const [userEmail, setUserEmail] = useState('');
+            const [userName, setUserName] = useState('');
+            const [hasMembership, setHasMembership] = useState(false);
+
+            const [lastOrder, setLastOrder] = useState(null);
             const [addedNotification, setAddedNotification] = useState(null);
 
-            // Temporizador de notificaciones
+            const [orderPlaced, setOrderPlaced] = useState(false);
+            const [generatedOrderNumber, setGeneratedOrderNumber] = useState('');
+            const [address, setAddress] = useState('');
+            const [paymentMethod, setPaymentMethod] = useState('mercadopago');
+            const [selectedDeliveryDate, setSelectedDeliveryDate] = useState('');
+            const [selectedTimeSlot, setSelectedTimeSlot] = useState('09:00 - 13:00');
+            const [deliveryNotes, setDeliveryNotes] = useState('');
+            const [surveyCompleted, setSurveyCompleted] = useState(false);
+
             useEffect(() => {
                 if (addedNotification) {
                     const timer = setTimeout(() => {
@@ -55,269 +60,632 @@
                 }
             }, [addedNotification]);
 
-            // Catálogo (Listado de precios)
+            const getMinDeliveryDate = () => {
+                const date = new Date();
+                let addedDays = 0;
+                while (addedDays < 3) {
+                    date.setDate(date.getDate() + 1);
+                    if (date.getDay() !== 0 && date.getDay() !== 6) {
+                        addedDays++;
+                    }
+                }
+                return date.toISOString().split('T')[0];
+            };
+
+            const minDateStr = getMinDeliveryDate();
+
+            // Catálogo con precios actualizados según listado
             const products = {
                 harinas: [
-                    { id: 'p1', name: 'Premezcla Universal x500g', price: 3127, image: '🌾', brand: 'Doña Pacha', category: 'Harinas' },
-                    { id: 'p2', name: 'Harina Integral de Porotos Mung x400g', price: 1879, image: '🫘', brand: 'Molino de Piedras', category: 'Harinas' },
-                    { id: 'p3', name: 'Rebozador sin gluten x500g', price: 3635, image: '🍞', brand: 'Doña Pacha', category: 'Harinas' }
+                    { id: 'h1', name: 'Premezcla Universal x500g', category: 'Harinas', price: 3127, image: '🌾', brand: 'Doña Pacha', composition: 'Harina de arroz, almidón de maíz', certified: true, stock: 15 },
+                    { id: 'h2', name: 'Premezcla Universal x500g', category: 'Harinas', price: 3166, image: '🌾', brand: 'YAMAY', composition: 'Certificada sin gluten', certified: true, stock: 10 },
+                    { id: 'h3', name: 'Harina Integral de Porotos Mung x400g', category: 'Harinas', price: 1879, image: '🫘', brand: 'Molino de Piedras', composition: '100% Porotos mung', certified: true, stock: 20 },
+                    { id: 'h4', name: 'Premezcla para Cookies x200g', category: 'Harinas', price: 10784, image: '🍪', brand: 'EMM', composition: 'Extra nutritivas', certified: true, stock: 12 }
                 ],
-                almacen: [
-                    { id: 'f1', name: 'Fideos Tirabuzón de Quinoa x250g', price: 4282, image: '🍝', brand: 'Tratenfú', category: 'Fideos' },
-                    { id: 'f2', name: 'Porotos Alubia x600g', price: 3170, image: '🫘', brand: 'Grano Pampa', category: 'Legumbres' },
-                    { id: 'f3', name: 'Garbanzos x600g', price: 3139, image: '🧆', brand: 'Grano Pampa', category: 'Legumbres' }
+                fideosLegumbres: [
+                    { id: 'f1', name: 'Fideos Tirabuzón de Quinoa x250g', category: 'Fideos', price: 4282, image: '🍝', brand: 'Tratenfú', composition: 'Quinoa y maíz', certified: true, stock: 10 },
+                    { id: 'f2', name: 'Tirabuzones al Huevo x300g', category: 'Fideos', price: 3171, image: '🍝', brand: 'El Colono', composition: 'Fideos al huevo libres de gluten', certified: true, stock: 12 },
+                    { id: 'f3', name: 'Porotos Alubia x600g', category: 'Legumbres', price: 3170, image: '🫘', brand: 'Grano Pampa', composition: 'Porotos alubia seleccionados', certified: true, stock: 15 },
+                    { id: 'f4', name: 'Garbanzos x600g', category: 'Legumbres', price: 3139, image: '🧆', brand: 'Grano Pampa', composition: 'Garbanzos naturales', certified: true, stock: 20 }
                 ],
                 snacks: [
-                    { id: 's1', name: 'Galletitas Choco y Dulce de Leche x125g', price: 2008, image: '🍪', brand: 'Praat', category: 'Snacks' },
-                    { id: 's2', name: 'Super Mix Brownies Chocolate x425g', price: 3949, image: '🍫', brand: 'Gula', category: 'Snacks' },
-                    { id: 'o1', name: 'Aceite de Salvado de Arroz x900cc', price: 8723, image: '🍾', brand: 'Blue Patna', category: 'Aceites' }
+                    { id: 's1', name: 'Galletitas Choco y Dulce de Leche x125g', category: 'Snacks', price: 2008, image: '🍪', brand: 'Praat', composition: 'Libre de gluten', certified: true, stock: 18 },
+                    { id: 's2', name: 'Galletas de Arroz Bañadas Choco x99g', category: 'Snacks', price: 2276, image: '🍘', brand: 'Genérico', composition: 'Bañadas en chocolate blanco', certified: true, stock: 14 },
+                    { id: 's3', name: 'Snack Crunchy Corn Sal Marina x35g', category: 'Snacks', price: 853, image: '🌽', brand: 'Lennys', composition: 'Maíz crocante', certified: true, stock: 25 }
                 ]
             };
-            
-            // Función compatible para aplanar el array de productos
-            let allProducts = [];
-            for (const category in products) {
-                allProducts = allProducts.concat(products[category]);
-            }
 
-            const recipes = [
-                { id: 'r1', title: 'Brownies súper húmedos', author: 'La Posta', image: 'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&q=80&w=400', mainProductId: 's2' },
-                { id: 'r2', title: 'Fideos de Quinoa al pesto', author: 'Comunidad', image: 'https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&q=80&w=400', mainProductId: 'f1' },
-                { id: 'r3', title: 'Hummus de Garbanzos Casero', author: 'La Posta', image: 'https://images.unsplash.com/photo-1633504581786-316c8002b1b9?auto=format&fit=crop&q=80&w=400', mainProductId: 'f3' }
+            // Metodo seguro para aplanar array en todos los navegadores
+            const allProducts = Object.values(products).reduce((acc, val) => acc.concat(val), []);
+
+            const communityRecipes = [
+                {
+                    id: 'rec1',
+                    title: '🥣 Bowl tibio de quinoa y vegetales',
+                    image: '🥗',
+                    time: '25 minutos',
+                    servings: '2 porciones',
+                    ingredients: [
+                        { text: '1 paquete de Fideos de Quinoa', productId: 'f1' },
+                        { text: '1 zucchini' },
+                        { text: '1 zanahoria' },
+                        { text: '½ morrón rojo' },
+                        { text: '½ cebolla morada' },
+                        { text: 'Sal, pimienta y pimentón ahumado' }
+                    ],
+                    steps: [
+                        'Lavar bien y cocinar la pasta según las indicaciones del paquete.',
+                        'Cortar los vegetales en cubos y saltearlos con aceite de oliva.',
+                        'Mezclar los vegetales con la pasta caliente.',
+                        'Condimentar con limón, sal, pimienta y pimentón.'
+                    ],
+                    tip: 'Podés sumar pollo grillado, queso o garbanzos para aumentar el aporte de proteínas.'
+                },
+                {
+                    id: 'rec2',
+                    title: '🍪 Cookies extra nutritivas exprés',
+                    image: '🍪',
+                    time: '15 minutos',
+                    servings: '8 porciones',
+                    ingredients: [
+                        { text: '1 Premezcla para Cookies x200g', productId: 'h4' },
+                        { text: '2 huevos' },
+                        { text: '50g de manteca o aceite de coco' },
+                        { text: 'Esencia de vainilla' }
+                    ],
+                    steps: [
+                        'Mezclar la premezcla con los huevos y la manteca derretida.',
+                        'Formar bolitas y aplastarlas sobre una placa para horno.',
+                        'Hornear a 180°C durante 10-12 minutos.',
+                        'Dejar enfriar antes de consumir.'
+                    ],
+                    tip: 'Ideal para desayuno o vianda escolar, 100% seguras y sin gluten.'
+                }
             ];
 
-            const calculateCart = () => {
+            useEffect(() => {
+                try {
+                    const savedUser = localStorage.getItem('lapostaUser');
+                    const savedUserName = localStorage.getItem('lapostaUserName');
+                    const savedMembership = localStorage.getItem('lapostaMembership');
+                    
+                    if (savedUser) {
+                        setUserEmail(savedUser);
+                        const savedCartData = localStorage.getItem(`lapostaCart_${savedUser}`);
+                        if (savedCartData) setSavedCart(JSON.parse(savedCartData));
+
+                        const savedLastOrder = localStorage.getItem(`lapostaLastOrder_${savedUser}`);
+                        if (savedLastOrder) setLastOrder(JSON.parse(savedLastOrder));
+                    }
+                    if (savedUserName) setUserName(savedUserName);
+                    if (savedMembership) setHasMembership(JSON.parse(savedMembership));
+                } catch (e) {
+                    console.error("Error al cargar de localStorage", e);
+                }
+            }, []);
+
+            const calculatePrice = (product, quantity = 1) => {
+                let price = product.price;
+                if (hasMembership) price = price * 0.9;
+                if (quantity > 3) price = price * 0.95;
+                return Math.round(price);
+            };
+
+            const calculateCartTotal = () => {
                 let subtotal = 0;
                 let totalItems = 0;
-                for (let i = 0; i < cart.length; i++) {
-                    const qty = cart[i].quantity || 1;
+                
+                cart.forEach(item => {
+                    const qty = item.quantity || 1;
                     totalItems += qty;
-                    subtotal += cart[i].price * qty;
-                }
+                    const unitPrice = calculatePrice(item, qty);
+                    subtotal += unitPrice * qty;
+                });
 
-                // Lógica de envíos
+                // REGLAS DE NEGOCIO ACTUALIZADAS:
+                // Compra Mínima: $90.000 (Se valida en la UI desactivando el botón)
+                // Envío: $9.000 si subtotal < $100.000, si no, Gratis.
                 let shipping = 0;
                 if (subtotal > 0 && subtotal < 100000) {
                     shipping = 9000;
                 }
-                return { subtotal: subtotal, total: subtotal + shipping, shipping: shipping, totalItems: totalItems };
+                
+                // Si tiene membresía también es gratis siempre según la lógica original, 
+                // pero respetaremos la regla general pedida de 100k para todos.
+                if (hasMembership) shipping = 0;
+
+                const total = subtotal + shipping;
+
+                return { subtotal, total, shipping, totalItems };
             };
 
-            const cartData = calculateCart();
-            const minOrderMet = cartData.subtotal >= 90000;
+            const generateOrderNumber = () => {
+                const timestamp = Date.now().toString().slice(-6);
+                const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+                return `LP-${timestamp}-${random}`;
+            };
 
-            const updateQty = (product, newQty) => {
+            const cartSummary = calculateCartTotal();
+            const MIN_ORDER = 90000;
+            const minOrderMet = cartSummary.subtotal >= MIN_ORDER;
+
+            const isValidEmail = (email) => email.includes('@') && email.includes('.');
+
+            const updateProductQuantity = (product, newQty) => {
                 const existingIndex = cart.findIndex(p => p.id === product.id);
                 if (newQty <= 0) {
                     setCart(cart.filter(p => p.id !== product.id));
                 } else if (existingIndex >= 0) {
                     const updated = [...cart];
-                    const oldQty = updated[existingIndex].quantity || 0;
-                    updated[existingIndex] = { ...updated[existingIndex], quantity: newQty };
+                    updated[existingIndex].quantity = newQty;
                     setCart(updated);
-                    if (newQty > oldQty) setAddedNotification(product);
+                    if (newQty > (cart[existingIndex].quantity || 0)) {
+                        setAddedNotification({ ...product, quantity: newQty });
+                    }
                 } else {
                     setCart([...cart, { ...product, quantity: newQty }]);
-                    setAddedNotification(product);
+                    setAddedNotification({ ...product, quantity: newQty });
                 }
             };
 
-            // VISTA INICIO / CATÁLOGO
-            const renderHome = () => (
-                <div className="pb-24">
-                    <div className="pt-12 px-5 bg-[#FCFBFB]">
-                        <h1 className="text-4xl font-extrabold text-cp-green tracking-tight">Catálogo</h1>
-                        <p className="text-gray-600 text-sm mt-1 mb-5">Encontrá tus favoritos 100% sin gluten.</p>
+            const handleLogout = () => {
+                if (confirm('¿Deseas salir y volver a la pantalla de inicio de sesión?')) {
+                    setCurrentPage('welcome');
+                    setUserEmail('');
+                    setUserName('');
+                    setCart([]);
+                    localStorage.removeItem('lapostaUser');
+                    localStorage.removeItem('lapostaUserName');
+                }
+            };
+
+            // 1. WELCOME PANTALLA REDISEÑADA
+            const renderWelcomePage = () => (
+                <div className="min-h-screen bg-amber-500 relative flex flex-col justify-between overflow-hidden max-w-md mx-auto">
+                    <div className="absolute top-10 left-[-20px] text-6xl opacity-20 transform -rotate-12">🍞</div>
+                    <div className="absolute top-40 right-[-10px] text-7xl opacity-20 transform rotate-45">🥐</div>
+                    <div className="absolute bottom-80 left-10 text-5xl opacity-20 transform -rotate-45">🌾</div>
+
+                    <div className="relative z-10 flex-1 flex flex-col items-center justify-center p-6 text-center mt-8">
+                        <div className="text-8xl mb-4 drop-shadow-md">🌾</div>
+                        <h1 className="text-5xl font-extrabold text-white tracking-tight mb-2 drop-shadow-md">La Posta</h1>
+                        <p className="text-xl font-semibold text-amber-50 mb-6 drop-shadow">Tu mes sin gluten resuelto</p>
+                    </div>
+                    
+                    <div className="relative z-10 bg-white rounded-t-3xl p-6 w-full shadow-[0_-10px_40px_rgba(0,0,0,0.15)] pb-10">
+                        <h2 className="text-lg font-bold text-gray-800 mb-4 text-center">Ingresá para comprar</h2>
                         
-                        <div className="flex gap-2 overflow-x-auto hide-scrollbar mb-6 pb-2">
-                            <button className="whitespace-nowrap px-4 py-1.5 rounded-full border border-cp-purple text-cp-purple text-sm font-semibold bg-cp-purple-light">Q Buscar</button>
-                            <button className="whitespace-nowrap px-4 py-1.5 rounded-full border border-cp-purple text-cp-purple text-sm font-semibold">Guardados</button>
-                            <button className="whitespace-nowrap px-4 py-1.5 rounded-full border border-cp-purple text-cp-purple text-sm font-semibold">Mis compras</button>
+                        <div className="space-y-3">
+                            <div>
+                                <input
+                                    type="email"
+                                    placeholder="Tu Email"
+                                    value={userEmail}
+                                    onChange={(e) => setUserEmail(e.target.value)}
+                                    className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm transition font-medium"
+                                />
+                            </div>
+
+                            <div>
+                                <input
+                                    type="text"
+                                    placeholder="Nombre (Opcional)"
+                                    value={userName}
+                                    onChange={(e) => setUserName(e.target.value)}
+                                    className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm transition font-medium"
+                                />
+                            </div>
+                            
+                            <button
+                                onClick={() => {
+                                    if (isValidEmail(userEmail)) {
+                                        const cleanEmail = userEmail.trim().toLowerCase();
+                                        const displayName = userName.trim() || cleanEmail.split('@')[0];
+                                        
+                                        setUserEmail(cleanEmail);
+                                        setUserName(displayName);
+                                        localStorage.setItem('lapostaUser', cleanEmail);
+                                        localStorage.setItem('lapostaUserName', displayName);
+                                        const saved = localStorage.getItem(`lapostaCart_${cleanEmail}`);
+                                        if (saved) setSavedCart(JSON.parse(saved));
+                                        const savedOrder = localStorage.getItem(`lapostaLastOrder_${cleanEmail}`);
+                                        if (savedOrder) setLastOrder(JSON.parse(savedOrder));
+                                        setCurrentPage('membership');
+                                    }
+                                }}
+                                disabled={!isValidEmail(userEmail)}
+                                className="w-full bg-amber-600 text-white py-3.5 rounded-xl font-bold disabled:bg-gray-300 disabled:text-gray-500 hover:bg-amber-700 transition text-sm mt-2"
+                            >
+                                Iniciar Sesión
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+
+            // 2. MEMBERSHIP
+            const renderMembershipPage = () => (
+                <div className="min-h-screen bg-gradient-to-b from-purple-50 to-purple-100 p-6 max-w-md mx-auto flex flex-col justify-between">
+                    <div className="pt-4 space-y-4">
+                        <div className="text-center mb-2">
+                            <h2 className="text-2xl font-bold text-purple-900">¡Hola, {userName}! 👋</h2>
+                            <p className="text-xs text-purple-700">Usuario: {userEmail}</p>
                         </div>
 
-                        <div className="space-y-3 mb-8">
-                            <div className="bg-cp-yellow rounded-xl p-4 cursor-pointer">
-                                <h3 className="font-bold text-cp-green text-sm">🚚 Envío gratis superando los $100.000</h3>
-                                <p className="text-xs text-cp-green opacity-90 mt-0.5">Si tu compra es menor, el costo es de $9.000.</p>
+                        <h2 className="text-md font-bold text-gray-800">Seleccioná tu plan:</h2>
+                        
+                        <div className="space-y-4">
+                            <div 
+                                onClick={() => {
+                                    setHasMembership(false);
+                                    localStorage.setItem('lapostaMembership', 'false');
+                                    setCurrentPage('home');
+                                }}
+                                className="bg-white p-5 rounded-xl border-2 border-gray-300 cursor-pointer hover:border-amber-500 transition shadow-sm space-y-2"
+                            >
+                                <p className="font-semibold text-base text-gray-800">Sin Membresía</p>
+                                <p className="text-xs text-gray-600">Ideal para probar la plataforma</p>
+                                <ul className="text-xs space-y-1 text-gray-600 pt-1">
+                                    <li>✓ Acceso a catálogo completo sin gluten</li>
+                                    <li>✓ Envío gratis desde $100.000</li>
+                                    <li>✗ Sin descuentos extra</li>
+                                </ul>
+                                <button className="w-full bg-gray-200 text-gray-800 py-2 rounded-lg font-semibold text-xs mt-2">
+                                    Empezar sin membresía
+                                </button>
                             </div>
-                            <div className="bg-cp-blue rounded-xl p-4">
-                                <h3 className="font-bold text-cp-green text-sm">✨ Compra mínima mayorista</h3>
-                                <p className="text-xs text-cp-green opacity-90 mt-0.5">El monto mínimo para realizar un pedido es de $90.000.</p>
+
+                            <div 
+                                onClick={() => {
+                                    setHasMembership(true);
+                                    localStorage.setItem('lapostaMembership', 'true');
+                                    setCurrentPage('home');
+                                }}
+                                className="bg-gradient-to-br from-amber-100 to-amber-50 p-5 rounded-xl border-2 border-amber-500 cursor-pointer hover:shadow-md transition relative ring-2 ring-amber-300 space-y-2"
+                            >
+                                <span className="absolute -top-3 right-4 bg-amber-600 text-white text-[10px] px-2.5 py-0.5 rounded-full font-bold">MEJOR OPCIÓN</span>
+                                <p className="font-bold text-base text-amber-900">Membresía Mensual ✨</p>
+                                <p className="text-xl font-extrabold text-amber-800">10% OFF en todo</p>
+                                <ul className="text-xs space-y-1 text-amber-900 pt-1">
+                                    <li>✓ <strong>10% OFF</strong> en todo el catálogo</li>
+                                    <li>✓ <strong>+5% EXTRA</strong> si comprás más de 3 unidades</li>
+                                    <li>✓ <strong>Envío GRATIS</strong> en todas tus compras</li>
+                                </ul>
+                                <button className="w-full bg-amber-700 text-white py-2 rounded-lg font-bold text-xs hover:bg-amber-800 transition mt-2 shadow">
+                                    Activar membresía
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button 
+                        onClick={handleLogout}
+                        className="text-xs text-gray-500 text-center underline py-4 hover:text-red-600"
+                    >
+                        🚪 Salir / Cambiar usuario
+                    </button>
+                </div>
+            );
+
+            // 3. HOME
+            const renderHomePage = () => (
+                <div className="min-h-screen bg-[#FDFDFD] pb-20">
+                    <div className="bg-amber-700 text-white p-4 sticky top-0 z-10 shadow">
+                        <div className="flex justify-between items-center mb-1 max-w-md mx-auto">
+                            <h1 className="text-xl font-bold flex items-center gap-2">🌾 La Posta</h1>
+                            <div className="flex items-center gap-3">
+                                <button onClick={() => setCurrentPage('cart')} className="text-2xl relative">
+                                    🛒
+                                    {cart.length > 0 && (
+                                        <span className="absolute -top-1 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                                            {cartSummary.totalItems}
+                                        </span>
+                                    )}
+                                </button>
+                                <button onClick={handleLogout} title="Cerrar sesión" className="text-xl bg-amber-800/60 hover:bg-amber-800 p-1.5 rounded-lg transition">🚪</button>
+                            </div>
+                        </div>
+                        <div className="flex justify-between text-[11px] text-amber-100 max-w-md mx-auto">
+                            <span>Usuario: {userName || userEmail}</span>
+                            <span className="font-semibold">{hasMembership ? '⭐ Socio (10% OFF)' : '👤 Estándar'}</span>
+                        </div>
+                    </div>
+
+                    <div className="bg-white border-b border-amber-100 p-3 shadow-sm">
+                        <div className="flex items-center gap-2 max-w-md mx-auto text-xs text-gray-700 font-medium">
+                            <span className="text-green-600 text-base font-bold">✓</span>
+                            <span>Todos los productos están certificados sin gluten (SENASA)</span>
+                        </div>
+                    </div>
+
+                    <div className="p-4 space-y-5 max-w-md mx-auto">
+                        
+                        {/* Banners Cherrypick Style - Adaptados a La Posta */}
+                        <div className="space-y-2 mb-6">
+                            <div className="bg-green-50 rounded-xl p-3.5 border border-green-200">
+                                <h3 className="font-bold text-green-900 text-sm">🚚 Envío gratis desde $100.000</h3>
+                                <p className="text-xs text-green-800 mt-0.5">Si tu compra es menor, el envío cuesta aprox. $9.000.</p>
+                            </div>
+                            <div className="bg-amber-50 rounded-xl p-3.5 border border-amber-200">
+                                <h3 className="font-bold text-amber-900 text-sm">✨ Compra mínima mayorista</h3>
+                                <p className="text-xs text-amber-800 mt-0.5">El monto mínimo para realizar un pedido es de $90.000.</p>
                             </div>
                         </div>
 
-                        {Object.keys(products).map(cat => (
-                            <div key={cat} className="mb-6">
-                                <h2 className="text-xl font-bold text-cp-green mb-3 capitalize">{cat}</h2>
+                        {Object.entries({
+                            'Harinas y Premezclas': products.harinas,
+                            'Fideos y Legumbres': products.fideosLegumbres,
+                            'Galletitas y Snacks': products.snacks
+                        }).map(([category, items]) => (
+                            <div key={category} className="pt-2">
+                                <h3 className="text-lg font-extrabold text-gray-800 mb-3">{category}</h3>
                                 <div className="space-y-3">
-                                    {products[cat].map(p => {
-                                        const cartItem = cart.find(c => c.id === p.id);
-                                        const qty = cartItem ? cartItem.quantity : 0;
+                                    {items.map(product => {
+                                        const inCart = cart.find(p => p.id === product.id);
+                                        const qty = inCart ? (inCart.quantity || 1) : 0;
+                                        const pricePerUnit = calculatePrice(product, qty || 1);
+                                        
                                         return (
-                                            <div key={p.id} className="flex bg-white p-3 rounded-2xl shadow-sm border border-gray-100 items-center justify-between">
-                                                <div className="flex items-center gap-3">
-                                                    <span className="text-3xl bg-gray-50 p-2 rounded-xl">{p.image}</span>
-                                                    <div>
-                                                        <p className="text-[10px] text-gray-500 font-bold uppercase">{p.brand}</p>
-                                                        <p className="font-bold text-cp-green text-sm leading-tight">{p.name}</p>
-                                                        <p className="font-bold text-cp-purple mt-1">${p.price}</p>
+                                            <div key={product.id} className="bg-white p-3.5 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition">
+                                                <div className="flex justify-between items-start gap-2">
+                                                    <div className="flex items-start gap-3 flex-1">
+                                                        <span className="text-3xl bg-gray-50 p-1.5 rounded-lg border border-gray-100">{product.image}</span>
+                                                        <div>
+                                                            <span className="text-[10px] bg-amber-100 text-amber-900 px-2 py-0.5 rounded font-bold uppercase tracking-wider">{product.brand}</span>
+                                                            <p className="font-bold text-sm text-gray-800 mt-1 leading-tight">{product.name}</p>
+                                                            <p className="text-sm font-extrabold text-amber-700 mt-1">${pricePerUnit}</p>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex flex-col items-end gap-2 justify-center h-full">
+                                                        {qty === 0 ? (
+                                                            <button onClick={() => updateProductQuantity(product, 1)} className="bg-amber-700 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-amber-800 transition shadow-sm mt-3">+ Agregar</button>
+                                                        ) : (
+                                                            <div className="flex items-center gap-2 bg-amber-50 p-1 rounded-xl border border-amber-200 mt-3">
+                                                                <button onClick={() => updateProductQuantity(product, qty - 1)} className="w-7 h-7 bg-white text-amber-800 rounded-lg font-bold shadow-sm flex items-center justify-center text-sm">−</button>
+                                                                <span className="text-sm font-bold text-amber-900 min-w-[20px] text-center">{qty}</span>
+                                                                <button onClick={() => updateProductQuantity(product, qty + 1)} className="w-7 h-7 bg-amber-700 text-white rounded-lg font-bold shadow-sm flex items-center justify-center text-sm">+</button>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
-                                                <div>
-                                                    {qty === 0 ? (
-                                                        <button onClick={() => updateQty(p, 1)} className="bg-cp-green text-white w-8 h-8 rounded-full font-bold shadow-md">+</button>
-                                                    ) : (
-                                                        <div className="flex items-center gap-2 bg-gray-100 rounded-full px-2 py-1">
-                                                            <button onClick={() => updateQty(p, qty-1)} className="text-cp-green font-bold w-6 h-6">-</button>
-                                                            <span className="text-xs font-bold w-3 text-center">{qty}</span>
-                                                            <button onClick={() => updateQty(p, qty+1)} className="text-cp-green font-bold w-6 h-6">+</button>
-                                                        </div>
-                                                    )}
-                                                </div>
                                             </div>
-                                        )
+                                        );
                                     })}
                                 </div>
                             </div>
                         ))}
                     </div>
+                    <BottomNav active="home" />
                 </div>
             );
 
-            // VISTA COMUNIDAD / RECETAS
-            const renderCommunity = () => (
-                <div className="pb-24 pt-12 px-5">
-                    <h1 className="text-4xl font-extrabold text-cp-green tracking-tight">Comunidad</h1>
-                    <p className="text-gray-600 text-sm mt-1 mb-6">Recetas sin gluten para inspirarte.</p>
+            // 5. CART
+            const renderCartPage = () => {
+                const { subtotal, total, shipping } = calculateCartTotal();
+                const minMet = subtotal >= MIN_ORDER;
 
-                    <h2 className="text-xl font-bold text-cp-green mb-3">Top picks for you</h2>
-                    
-                    <div className="flex overflow-x-auto gap-4 hide-scrollbar pb-4">
-                        {recipes.map(r => {
-                            const prod = allProducts.find(p => p.id === r.mainProductId);
-                            const inCart = prod ? cart.find(c => c.id === prod.id) : null;
-                            const currentQty = inCart ? inCart.quantity : 0;
-                            
-                            return (
-                            <div key={r.id} className="min-w-[240px] bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex-shrink-0">
-                                <img src={r.image} alt={r.title} className="w-full h-40 object-cover" />
-                                <div className="p-4 relative">
-                                    <div className="absolute -top-6 left-4 bg-white p-1.5 rounded-full shadow-md text-xl">
-                                        👨‍🍳
+                return (
+                    <div className="min-h-screen bg-gray-50 pb-24">
+                        <div className="bg-amber-700 text-white p-4 sticky top-0 z-10 shadow">
+                            <div className="flex justify-between items-center max-w-md mx-auto">
+                                <button onClick={() => setCurrentPage('home')} className="text-amber-100 text-xs font-bold">← Volver</button>
+                                <h1 className="text-lg font-bold">Mi Carrito 🛒</h1>
+                                <button onClick={handleLogout} className="text-lg">🚪</button>
+                            </div>
+                        </div>
+
+                        <div className="p-4 space-y-4 max-w-md mx-auto">
+                            {cart.length === 0 ? (
+                                <div className="p-10 text-center text-gray-500 space-y-3 bg-white rounded-2xl border border-gray-200 shadow-sm mt-4">
+                                    <p className="text-5xl">🛒</p>
+                                    <p className="text-sm font-semibold">Tu carrito está vacío</p>
+                                    <button onClick={() => setCurrentPage('home')} className="mt-2 bg-amber-700 text-white text-xs px-5 py-2.5 rounded-xl font-bold shadow-sm">Explorar catálogo</button>
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="space-y-3">
+                                        {cart.map((item, idx) => {
+                                            const qty = item.quantity || 1;
+                                            const pricePerUnit = calculatePrice(item, qty);
+                                            const itemTotal = pricePerUnit * qty;
+                                            return (
+                                                <div key={idx} className="bg-white p-3.5 rounded-xl border border-gray-200 shadow-sm flex justify-between items-center text-xs">
+                                                    <div>
+                                                        <p className="font-bold text-gray-800 text-sm">{item.image} {item.name}</p>
+                                                        <p className="text-gray-500 mt-0.5">${pricePerUnit} x {qty} = <strong className="text-amber-800">${itemTotal}</strong></p>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="flex items-center gap-1.5 bg-gray-50 p-1 rounded-lg border border-gray-200">
+                                                            <button onClick={() => updateProductQuantity(item, qty - 1)} className="w-6 h-6 bg-white font-bold rounded shadow-sm text-gray-600">−</button>
+                                                            <span className="px-1.5 font-bold text-gray-800">{qty}</span>
+                                                            <button onClick={() => updateProductQuantity(item, qty + 1)} className="w-6 h-6 bg-white font-bold rounded shadow-sm text-gray-600">+</button>
+                                                        </div>
+                                                        <button onClick={() => updateProductQuantity(item, 0)} className="text-red-400 font-bold p-1 hover:text-red-600 text-lg">✕</button>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
                                     </div>
-                                    <h3 className="font-bold text-cp-green text-lg mt-2 leading-tight">{r.title}</h3>
-                                    <p className="text-xs text-gray-500 mt-1">Por {r.author}</p>
-                                    
-                                    <div className="mt-4 pt-3 border-t border-gray-100">
-                                        <p className="text-[10px] uppercase font-bold text-gray-400 mb-2">Ingrediente principal:</p>
-                                        <div className="flex justify-between items-center">
-                                            <p className="text-xs font-semibold text-cp-green truncate w-32">{prod ? prod.name : 'Ingrediente'}</p>
-                                            <button onClick={() => { if(prod) updateQty(prod, currentQty + 1) }} className="text-[10px] bg-cp-green text-white px-3 py-1.5 rounded-full font-bold">
-                                                Agregar
-                                            </button>
+
+                                    <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm space-y-3 text-sm">
+                                        <div className="flex justify-between text-gray-600 font-medium"><span>Subtotal:</span><span>${subtotal}</span></div>
+                                        <div className="flex justify-between text-gray-600 font-medium">
+                                            <span>Envío:</span>
+                                            <span>{shipping === 0 ? <span className="text-green-600 font-bold">¡GRATIS!</span> : `$${shipping}`}</span>
+                                        </div>
+                                        <div className="flex justify-between font-extrabold text-lg border-t pt-3 text-gray-800">
+                                            <span>Total:</span><span className="text-amber-700">${total}</span>
                                         </div>
                                     </div>
-                                </div>
-                            </div>
-                        )})}
-                    </div>
-                </div>
-            );
 
-            // VISTA CARRITO
-            const renderCart = () => (
-                <div className="pb-24 pt-12 px-5">
-                    <h1 className="text-4xl font-extrabold text-cp-green tracking-tight">Carrito</h1>
-                    
-                    {cart.length === 0 ? (
-                        <p className="text-gray-500 mt-5">Tu carrito está vacío.</p>
-                    ) : (
-                        <div className="mt-6 space-y-4">
-                            {cart.map(item => (
-                                <div key={item.id} className="flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-                                    <div>
-                                        <p className="font-bold text-cp-green text-sm">{item.name}</p>
-                                        <p className="text-cp-purple font-semibold text-xs mt-1">${item.price} x {item.quantity} = ${item.price * item.quantity}</p>
+                                    {!minMet && (
+                                        <div className="bg-red-50 text-red-700 p-3.5 rounded-xl text-xs font-bold text-center border border-red-200">
+                                            Faltan ${(MIN_ORDER - subtotal).toLocaleString('es-AR')} para alcanzar el mínimo de compra ($90.000).
+                                        </div>
+                                    )}
+
+                                    <button 
+                                        disabled={!minMet}
+                                        onClick={() => setCurrentPage('checkout')} 
+                                        className={`w-full py-3.5 rounded-xl font-bold text-sm transition shadow-sm mt-2 ${minMet ? 'bg-amber-700 text-white hover:bg-amber-800' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
+                                    >
+                                        Proceder al Pago
+                                    </button>
+                                </>
+                            )}
+                        </div>
+                        <BottomNav active="cart" />
+                    </div>
+                );
+            };
+
+            // 8. COMMUNITY (RECETAS)
+            const renderCommunityPage = () => (
+                <div className="min-h-screen bg-gray-50 pb-20">
+                    <div className="bg-amber-700 text-white p-4 sticky top-0 z-10 shadow">
+                        <div className="flex justify-between items-center max-w-md mx-auto">
+                            <button onClick={() => setCurrentPage('home')} className="text-amber-100 text-xs font-bold">← Volver</button>
+                            <h1 className="text-lg font-bold">Comunidad & Recetas 👥</h1>
+                            <button onClick={handleLogout} className="text-lg">🚪</button>
+                        </div>
+                    </div>
+
+                    <div className="p-4 space-y-6 max-w-md mx-auto">
+                        <div className="bg-purple-50 border-l-4 border-purple-500 p-3.5 rounded-xl text-xs text-purple-900 leading-relaxed shadow-sm">
+                            🍳 <strong>Recetas Interactivas:</strong> Leé las instrucciones y agregá los ingredientes disponibles directo a tu carrito. Todo 100% sin gluten.
+                        </div>
+
+                        <div className="space-y-6">
+                            <h2 className="text-lg font-extrabold text-gray-800">📖 Recetas Saludables</h2>
+                            
+                            {communityRecipes.map(recipe => (
+                                <div key={recipe.id} className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden p-4">
+                                    <div className="flex items-center gap-3 border-b border-gray-100 pb-3 mb-3">
+                                        <span className="text-4xl p-2 bg-amber-50 rounded-xl border border-amber-100">{recipe.image}</span>
+                                        <div>
+                                            <h3 className="font-bold text-gray-800 text-base">{recipe.title}</h3>
+                                            <div className="flex gap-2 text-[11px] text-gray-500 mt-1 font-medium">
+                                                <span>⏱️ {recipe.time}</span>
+                                                <span>•</span>
+                                                <span>🍽️ {recipe.servings}</span>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-2 bg-gray-100 rounded-full px-2 py-1">
-                                        <button onClick={() => updateQty(item, item.quantity-1)} className="text-cp-green font-bold px-2">-</button>
-                                        <span className="text-xs font-bold">{item.quantity}</span>
-                                        <button onClick={() => updateQty(item, item.quantity+1)} className="text-cp-green font-bold px-2">+</button>
+
+                                    <div>
+                                        <p className="text-xs font-bold text-amber-900 mb-2 flex items-center gap-1">🛒 Ingredientes y Disponibilidad:</p>
+                                        <div className="space-y-2">
+                                            {recipe.ingredients.map((ing, i) => {
+                                                const product = ing.productId ? allProducts.find(p => p.id === ing.productId) : null;
+                                                const inCart = product ? cart.find(p => p.id === product.id) : null;
+                                                const qty = inCart ? (inCart.quantity || 1) : 0;
+                                                const pricePerUnit = product ? calculatePrice(product, qty || 1) : 0;
+
+                                                return (
+                                                    <div key={i} className="flex items-center justify-between p-2.5 bg-gray-50 rounded-xl border border-gray-100 text-xs">
+                                                        <div className="flex items-center gap-2 pr-2">
+                                                            <span className="text-gray-400">•</span>
+                                                            <span className="text-gray-800 font-medium">{ing.text}</span>
+                                                        </div>
+
+                                                        {product ? (
+                                                            <div className="flex items-center gap-3 flex-shrink-0">
+                                                                <span className="text-xs font-extrabold text-amber-700">${pricePerUnit}</span>
+                                                                {qty === 0 ? (
+                                                                    <button onClick={() => updateProductQuantity(product, 1)} className="bg-amber-700 text-white px-3 py-1.5 rounded-lg text-[11px] font-bold hover:bg-amber-800 transition shadow-sm">+ Agregar</button>
+                                                                ) : (
+                                                                    <div className="flex items-center gap-1.5 bg-amber-100 p-1 rounded-lg border border-amber-300">
+                                                                        <button onClick={() => updateProductQuantity(product, qty - 1)} className="w-5 h-5 bg-white text-amber-800 rounded font-bold shadow-sm flex items-center justify-center text-[10px]">−</button>
+                                                                        <span className="text-xs font-bold text-amber-900 min-w-[14px] text-center">{qty}</span>
+                                                                        <button onClick={() => updateProductQuantity(product, qty + 1)} className="w-5 h-5 bg-amber-700 text-white rounded font-bold shadow-sm flex items-center justify-center text-[10px]">+</button>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-[10px] text-gray-400 italic bg-gray-200 px-2 py-1 rounded-lg flex-shrink-0">En casa</span>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-amber-50 p-3.5 rounded-xl border border-amber-100 mt-4 space-y-2">
+                                        <p className="text-xs font-bold text-amber-950 flex items-center gap-1">👨‍🍳 Preparación Paso a Paso:</p>
+                                        <ol className="text-xs space-y-1.5 text-gray-700 list-decimal pl-4">
+                                            {recipe.steps.map((step, sIdx) => <li key={sIdx} className="pl-1 leading-relaxed">{step}</li>)}
+                                        </ol>
+                                    </div>
+
+                                    <div className="bg-green-50 p-3 rounded-xl border border-green-200 text-xs text-green-900 mt-3 flex items-start gap-2">
+                                        <span className="text-base">💚</span>
+                                        <p className="mt-0.5"><strong>Tip:</strong> {recipe.tip}</p>
                                     </div>
                                 </div>
                             ))}
-
-                            <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 mt-6 space-y-2 text-sm">
-                                <div className="flex justify-between text-gray-600"><span>Subtotal:</span><span>${cartData.subtotal}</span></div>
-                                <div className="flex justify-between text-gray-600">
-                                    <span>Envío:</span>
-                                    <span>{cartData.shipping === 0 ? <span className="text-green-600 font-bold">Gratis</span> : `$${cartData.shipping}`}</span>
-                                </div>
-                                <div className="flex justify-between font-bold text-lg text-cp-green border-t pt-3 mt-2">
-                                    <span>Total:</span><span>${cartData.total}</span>
-                                </div>
-                            </div>
-
-                            {!minOrderMet && (
-                                <div className="bg-red-50 text-red-700 p-3 rounded-xl text-xs font-bold text-center border border-red-200">
-                                    Faltan ${90000 - cartData.subtotal} para alcanzar el mínimo de compra mayorista ($90.000).
-                                </div>
-                            )}
-
-                            <button 
-                                disabled={!minOrderMet}
-                                className={`w-full py-4 rounded-full font-bold text-sm mt-4 transition shadow-md ${minOrderMet ? 'bg-cp-green text-white' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
-                            >
-                                Ir a Pagar
-                            </button>
                         </div>
-                    )}
+
+                        <div className="space-y-3 pt-4">
+                            <div className="flex justify-between items-center border-b pb-2">
+                                <h2 className="text-md font-bold text-gray-800">🍽️ Restaurantes & Lugares sin gluten</h2>
+                                <span className="bg-amber-100 text-amber-800 text-[9px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider border border-amber-300">PRÓXIMAMENTE</span>
+                            </div>
+                            <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm opacity-60">
+                                <p className="text-xs text-gray-500 font-medium">Muy pronto vas a poder descubrir lugares 100% seguros y certificados sin gluten cerca tuyo.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <BottomNav active="community" />
+                </div>
+            );
+
+            const BottomNav = ({ active }) => (
+                <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around p-3 z-20 max-w-md mx-auto shadow-[0_-5px_15px_rgba(0,0,0,0.05)] pb-5">
+                    <button onClick={() => setCurrentPage('home')} className={`flex flex-col items-center text-[10px] font-bold ${active === 'home' ? 'text-amber-700' : 'text-gray-400'}`}><span className="text-2xl mb-1">📋</span>Catálogo</button>
+                    <button onClick={() => setCurrentPage('community')} className={`flex flex-col items-center text-[10px] font-bold ${active === 'community' ? 'text-amber-700' : 'text-gray-400'}`}><span className="text-2xl mb-1">👨‍🍳</span>Comunidad</button>
+                    <button onClick={() => setCurrentPage('cart')} className={`flex flex-col items-center text-[10px] font-bold relative ${active === 'cart' ? 'text-amber-700' : 'text-gray-400'}`}>
+                        <span className="text-2xl mb-1">🛍️</span>
+                        {cartSummary.totalItems > 0 && <span className="absolute -top-1 right-2 bg-red-500 text-white text-[9px] rounded-full w-4 h-4 flex items-center justify-center font-bold">{cartSummary.totalItems}</span>}
+                        Shop
+                    </button>
+                    <button onClick={handleLogout} className="flex flex-col items-center text-[10px] font-bold text-gray-400 hover:text-red-500"><span className="text-2xl mb-1">👤</span>Salir</button>
                 </div>
             );
 
             return (
-                <div className="relative min-h-screen max-w-md mx-auto bg-[#FCFBFB] shadow-2xl overflow-hidden">
-                    {currentPage === 'home' && renderHome()}
-                    {currentPage === 'community' && renderCommunity()}
-                    {currentPage === 'cart' && renderCart()}
-
-                    {/* Pop-up de Notificación "Agregado al carrito" con botón Ir a Pagar */}
+                <div className="relative min-h-screen bg-[#FDFDFD]">
+                    {currentPage === 'welcome' && renderWelcomePage()}
+                    {currentPage === 'membership' && renderMembershipPage()}
+                    {currentPage === 'home' && renderHomePage()}
+                    {currentPage === 'cart' && renderCartPage()}
+                    {currentPage === 'community' && renderCommunityPage()}
+                    
+                    {/* POP UP FLOTANTE DE NOTIFICACIÓN CON BOTÓN "IR A PAGAR" */}
                     {addedNotification && (
-                        <div className="fixed bottom-24 left-0 right-0 px-5 z-50 animate-slide-up max-w-md mx-auto">
-                            <div className="bg-cp-green text-white p-3 rounded-2xl shadow-xl flex items-center justify-between border border-[#165e38]">
-                                <div className="flex items-center gap-3">
-                                    <span className="text-2xl">{addedNotification.image}</span>
-                                    <div>
-                                        <p className="text-[10px] text-cp-yellow font-bold uppercase tracking-wider">Agregado al carrito</p>
-                                        <p className="text-xs font-semibold truncate w-32">{addedNotification.name}</p>
+                        <div className="fixed bottom-24 left-0 right-0 px-4 z-50 animate-slide-up max-w-md mx-auto">
+                            <div className="bg-gray-900 text-white p-3.5 rounded-2xl shadow-2xl flex items-center justify-between gap-3 border border-gray-700">
+                                <div className="flex items-center gap-3 overflow-hidden">
+                                    <span className="text-3xl flex-shrink-0 bg-gray-800 p-1.5 rounded-xl">{addedNotification.image}</span>
+                                    <div className="truncate">
+                                        <p className="text-[10px] text-amber-400 font-extrabold uppercase tracking-wider">¡Agregado al carrito!</p>
+                                        <p className="text-xs font-semibold truncate text-white">{addedNotification.name}</p>
                                     </div>
                                 </div>
-                                <button 
-                                    onClick={() => { setAddedNotification(null); setCurrentPage('cart'); }}
-                                    className="bg-white text-cp-green text-xs font-bold px-4 py-2 rounded-full whitespace-nowrap shadow-sm"
-                                >
-                                    Ir a Pagar
-                                </button>
+
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                    <button
+                                        onClick={() => { setAddedNotification(null); setCurrentPage('cart'); }}
+                                        className="bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition shadow-md whitespace-nowrap border border-amber-500"
+                                    >
+                                        Ir a Pagar →
+                                    </button>
+                                    <button onClick={() => setAddedNotification(null)} className="text-gray-400 hover:text-white p-2 text-sm font-bold">✕</button>
+                                </div>
                             </div>
                         </div>
                     )}
-
-                    {/* Bottom Nav */}
-                    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 flex justify-around p-3 z-40 max-w-md mx-auto pb-6">
-                        <button onClick={() => setCurrentPage('home')} className={`flex flex-col items-center gap-1 ${currentPage === 'home' ? 'text-cp-green' : 'text-gray-400'}`}>
-                            <span className="text-xl">📋</span>
-                            <span className="text-[10px] font-bold">Catálogo</span>
-                        </button>
-                        <button onClick={() => setCurrentPage('cart')} className={`flex flex-col items-center gap-1 relative ${currentPage === 'cart' ? 'text-cp-green' : 'text-gray-400'}`}>
-                            <span className="text-xl">🛍️</span>
-                            {cartData.totalItems > 0 && <span className="absolute -top-1 -right-2 bg-red-500 text-white text-[9px] rounded-full w-4 h-4 flex items-center justify-center font-bold">{cartData.totalItems}</span>}
-                            <span className="text-[10px] font-bold">Shop</span>
-                        </button>
-                        <button onClick={() => setCurrentPage('community')} className={`flex flex-col items-center gap-1 ${currentPage === 'community' ? 'text-cp-green' : 'text-gray-400'}`}>
-                            <span className="text-xl">👨‍🍳</span>
-                            <span className="text-[10px] font-bold">Comunidad</span>
-                        </button>
-                    </div>
                 </div>
             );
         };
