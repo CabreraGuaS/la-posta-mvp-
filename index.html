@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>La Posta - MVP</title>
     <!-- React 18 & ReactDOM -->
-    <script crossorigin src="[https://unpkg.com/react@18/umd/react.production.min.js](https://unpkg.com/react@18/umd/react.production.min.js)"></script>
-    <script crossorigin src="[https://unpkg.com/react-dom@18/umd/react-dom.production.min.js](https://unpkg.com/react-dom@18/umd/react-dom.production.min.js)"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <!-- Tailwind CSS -->
-    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
     <!-- Babel -->
-    <script src="[https://unpkg.com/@babel/standalone/babel.min.js](https://unpkg.com/@babel/standalone/babel.min.js)"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
         body { 
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -37,8 +37,25 @@
 <body>
     <div id="root"></div>
 
-    <script type="text/babel">
+    <script type="text/babel" data-type="module" data-presets="react,env">
         const { useState, useEffect } = React;
+
+        // Capturador de errores para evitar pantallas blancas
+        class ErrorBoundary extends React.Component {
+            constructor(props) {
+                super(props);
+                this.state = { hasError: false, errorInfo: null };
+            }
+            static getDerivedStateFromError(error) {
+                return { hasError: true, errorInfo: error.message };
+            }
+            render() {
+                if (this.state.hasError) {
+                    return <div className="p-10 text-red-600 font-bold">Error en la aplicación: {this.state.errorInfo}</div>;
+                }
+                return this.props.children; 
+            }
+        }
 
         const LaPostaMVP = () => {
             const [currentPage, setCurrentPage] = useState('home');
@@ -53,7 +70,7 @@
                 }
             }, [addedNotification]);
 
-            // Catálogo actualizado desde Listado de precios_2.xlsx
+            // Catálogo actualizado
             const products = {
                 harinas: [
                     { id: 'p1', name: 'Premezcla Universal x500g', price: 3127, image: '🌾', brand: 'Doña Pacha', category: 'Harinas' },
@@ -71,12 +88,14 @@
                     { id: 'o1', name: 'Aceite de Salvado de Arroz x900cc', price: 8723, image: '🍾', brand: 'Blue Patna', category: 'Aceites' }
                 ]
             };
-            const allProducts = Object.values(products).flat();
+            
+            // Reemplazo compatible para navegadores que no soportan .flat()
+            const allProducts = Object.values(products).reduce((acc, val) => acc.concat(val), []);
 
             const recipes = [
-                { id: 'r1', title: 'Brownies súper húmedos', author: 'La Posta', image: '[https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&q=80&w=400](https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&q=80&w=400)', mainProductId: 's2' },
-                { id: 'r2', title: 'Fideos de Quinoa al pesto', author: 'Comunidad', image: '[https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&q=80&w=400](https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&q=80&w=400)', mainProductId: 'f1' },
-                { id: 'r3', title: 'Hummus de Garbanzos Casero', author: 'La Posta', image: '[https://images.unsplash.com/photo-1633504581786-316c8002b1b9?auto=format&fit=crop&q=80&w=400](https://images.unsplash.com/photo-1633504581786-316c8002b1b9?auto=format&fit=crop&q=80&w=400)', mainProductId: 'f3' }
+                { id: 'r1', title: 'Brownies súper húmedos', author: 'La Posta', image: 'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&q=80&w=400', mainProductId: 's2' },
+                { id: 'r2', title: 'Fideos de Quinoa al pesto', author: 'Comunidad', image: 'https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&q=80&w=400', mainProductId: 'f1' },
+                { id: 'r3', title: 'Hummus de Garbanzos Casero', author: 'La Posta', image: 'https://images.unsplash.com/photo-1633504581786-316c8002b1b9?auto=format&fit=crop&q=80&w=400', mainProductId: 'f3' }
             ];
 
             const calculateCart = () => {
@@ -100,14 +119,15 @@
             const minOrderMet = cartData.subtotal >= 90000;
 
             const updateQty = (product, newQty) => {
-                const existing = cart.findIndex(p => p.id === product.id);
+                const existingIndex = cart.findIndex(p => p.id === product.id);
                 if (newQty <= 0) {
                     setCart(cart.filter(p => p.id !== product.id));
-                } else if (existing >= 0) {
+                } else if (existingIndex >= 0) {
                     const updated = [...cart];
-                    updated[existing].quantity = newQty;
+                    const oldQty = updated[existingIndex].quantity || 0;
+                    updated[existingIndex] = { ...updated[existingIndex], quantity: newQty };
                     setCart(updated);
-                    if (newQty > cart[existing].quantity) setAddedNotification(product);
+                    if (newQty > oldQty) setAddedNotification(product);
                 } else {
                     setCart([...cart, { ...product, quantity: newQty }]);
                     setAddedNotification(product);
@@ -143,7 +163,8 @@
                                 <h2 className="text-xl font-bold text-cp-green mb-3 capitalize">{cat}</h2>
                                 <div className="space-y-3">
                                     {items.map(p => {
-                                        const qty = cart.find(c => c.id === p.id)?.quantity || 0;
+                                        const cartItem = cart.find(c => c.id === p.id);
+                                        const qty = cartItem ? cartItem.quantity : 0;
                                         return (
                                             <div key={p.id} className="flex bg-white p-3 rounded-2xl shadow-sm border border-gray-100 items-center justify-between">
                                                 <div className="flex items-center gap-3">
@@ -186,6 +207,9 @@
                     <div className="flex overflow-x-auto gap-4 hide-scrollbar pb-4">
                         {recipes.map(r => {
                             const prod = allProducts.find(p => p.id === r.mainProductId);
+                            const inCart = prod ? cart.find(c => c.id === prod.id) : null;
+                            const currentQty = inCart ? inCart.quantity : 0;
+                            
                             return (
                             <div key={r.id} className="min-w-[240px] bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex-shrink-0">
                                 <img src={r.image} alt={r.title} className="w-full h-40 object-cover" />
@@ -199,8 +223,8 @@
                                     <div className="mt-4 pt-3 border-t border-gray-100">
                                         <p className="text-[10px] uppercase font-bold text-gray-400 mb-2">Ingrediente principal:</p>
                                         <div className="flex justify-between items-center">
-                                            <p className="text-xs font-semibold text-cp-green truncate w-32">{prod?.name}</p>
-                                            <button onClick={() => updateQty(prod, (cart.find(c => c.id === prod.id)?.quantity || 0) + 1)} className="text-[10px] bg-cp-green text-white px-3 py-1.5 rounded-full font-bold">
+                                            <p className="text-xs font-semibold text-cp-green truncate w-32">{prod ? prod.name : 'Ingrediente'}</p>
+                                            <button onClick={() => { if(prod) updateQty(prod, currentQty + 1) }} className="text-[10px] bg-cp-green text-white px-3 py-1.5 rounded-full font-bold">
                                                 Agregar
                                             </button>
                                         </div>
@@ -225,7 +249,7 @@
                                 <div key={item.id} className="flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
                                     <div>
                                         <p className="font-bold text-cp-green text-sm">{item.name}</p>
-                                        <p className="text-cp-purple font-semibold text-xs mt-1">${item.price} x {item.quantity} =${item.price * item.quantity}</p>
+                                        <p className="text-cp-purple font-semibold text-xs mt-1">${item.price} x {item.quantity} = ${item.price * item.quantity}</p>
                                     </div>
                                     <div className="flex items-center gap-2 bg-gray-100 rounded-full px-2 py-1">
                                         <button onClick={() => updateQty(item, item.quantity-1)} className="text-cp-green font-bold px-2">-</button>
@@ -290,7 +314,7 @@
                         </div>
                     )}
 
-                    {/* Bottom Nav estilo Cherrypick */}
+                    {/* Bottom Nav */}
                     <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 flex justify-around p-3 z-40 max-w-md mx-auto pb-6">
                         <button onClick={() => setCurrentPage('home')} className={`flex flex-col items-center gap-1 ${currentPage === 'home' ? 'text-cp-green' : 'text-gray-400'}`}>
                             <span className="text-xl">📋</span>
@@ -311,7 +335,7 @@
         };
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<LaPostaMVP/>);
+        root.render(<ErrorBoundary><LaPostaMVP/></ErrorBoundary>);
     </script>
 </body>
 </html>
