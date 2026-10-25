@@ -9,11 +9,13 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Babel Standalone para transformar JSX -->
+    <!-- Babel Standalone -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-        
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #FAFAFA;
+        }
         @keyframes slideUp {
             from { transform: translateY(100%); opacity: 0; }
             to { transform: translateY(0); opacity: 1; }
@@ -21,9 +23,23 @@
         .animate-slide-up {
             animation: slideUp 0.3s ease-out forwards;
         }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        /* Colores Cherrypick style */
+        .text-cp-green { color: #0E472A; }
+        .bg-cp-green { background-color: #0E472A; }
+        .bg-cp-yellow { background-color: #E2FF33; }
+        .bg-cp-blue { background-color: #D3F3FA; }
+        .text-cp-purple { color: #511C3D; }
+        .border-cp-purple { border-color: #8C4B78; }
     </style>
 </head>
-<body class="bg-gray-100">
+<body>
     <div id="root"></div>
 
     <script type="text/babel">
@@ -36,10 +52,10 @@
             const [userEmail, setUserEmail] = useState('');
             const [userName, setUserName] = useState('');
             const [hasMembership, setHasMembership] = useState(false);
-
             const [lastOrder, setLastOrder] = useState(null);
             const [addedNotification, setAddedNotification] = useState(null);
-
+            
+            // Checkout state
             const [orderPlaced, setOrderPlaced] = useState(false);
             const [generatedOrderNumber, setGeneratedOrderNumber] = useState('');
             const [address, setAddress] = useState('');
@@ -51,9 +67,7 @@
 
             useEffect(() => {
                 if (addedNotification) {
-                    const timer = setTimeout(() => {
-                        setAddedNotification(null);
-                    }, 6000);
+                    const timer = setTimeout(() => setAddedNotification(null), 6000);
                     return () => clearTimeout(timer);
                 }
             }, [addedNotification]);
@@ -63,132 +77,84 @@
                 let addedDays = 0;
                 while (addedDays < 3) {
                     date.setDate(date.getDate() + 1);
-                    if (date.getDay() !== 0 && date.getDay() !== 6) {
-                        addedDays++;
-                    }
+                    if (date.getDay() !== 0 && date.getDay() !== 6) addedDays++;
                 }
                 return date.toISOString().split('T')[0];
             };
-
             const minDateStr = getMinDeliveryDate();
 
-            // Catálogo con precios actualizados
+            // Productos actualizados según Listado de precios_2.xlsx
             const products = {
-                panificados: [
-                    { id: 'p1', name: 'Pan sin TACC Integral (Fargo)', category: 'Panificados', price: 5200, image: '🍞', brand: 'Fargo', composition: 'Almidón de maíz, harina de arroz, agua, sal, levadura, semillas', certified: true, stock: 15 },
-                    { id: 'p2', name: 'Medialunas sin TACC', category: 'Panificados', price: 7200, image: '🥐', brand: 'Celidarina', composition: 'Harina de arroz, manteca, azúcar, sal, levadura', certified: true, stock: 8 },
-                    { id: 'p3', name: 'Galletitas de agua sin TACC', category: 'Panificados', price: 3400, image: '🍘', brand: 'Smack', composition: 'Almidón de papa, aceite de girasol, sal, leudante', certified: true, stock: 20 }
+                almacen: [
+                    { id: 'p1', name: 'Premezcla Universal x500g', category: 'Harinas', price: 3127, image: '🌾', brand: 'Doña Pacha', composition: 'Harina de arroz, almidón de maíz, goma xantana', certified: true },
+                    { id: 'p2', name: 'Premezcla Universal x500g', category: 'Harinas', price: 3166, image: '🌾', brand: 'YAMAY', composition: 'Premezcla certificada sin gluten', certified: true },
+                    { id: 'p3', name: 'Harina Integral Porotos Mung x400g', category: 'Harinas', price: 1879, image: '🫘', brand: 'Molino de Piedras', composition: '100% Porotos mung', certified: true },
+                    { id: 'p4', name: 'Rebozador sin gluten x500g', category: 'Rebozadores', price: 3635, image: '🍞', brand: 'Doña Pacha', composition: 'Harina de arroz y maíz extrusionado', certified: true }
                 ],
-                frescosAlmacen: [
-                    { id: 'a1', name: 'Quinoa Real (500g)', category: 'Almacén', price: 25000, image: '🌾', brand: 'NutriBio', composition: '100% Quinoa real lavada y certificada', certified: true, stock: 10 },
-                    { id: 'a2', name: 'Avena certificada sin TACC (500g)', category: 'Almacén', price: 18000, image: '🥣', brand: 'NaturAl', composition: 'Avena pura libre de gluten', certified: true, stock: 12 },
-                    { id: 'a3', name: 'Aceite de Oliva Extra Virgen (500ml)', category: 'Almacén', price: 45000, image: '🫒', brand: 'Zuelo', composition: 'Aceite de oliva virgen extra', certified: true, stock: 15 },
-                    { id: 'f1', name: 'Huevos de campo (6 unidades)', category: 'Frescos', price: 13000, image: '🥚', brand: 'Granja Rosa', composition: 'Huevos frescos de gallinas libres de jaula', certified: true, stock: 20 },
-                    { id: 'f2', name: 'Bananas Ecuador (kg)', category: 'Verdulería', price: 11000, image: '🍌', brand: 'Fruver', composition: 'Fruta fresca seleccionada', certified: true, stock: 25 },
-                    { id: 'f3', name: 'Papas Seleccionadas (kg)', category: 'Verdulería', price: 9000, image: '🥔', brand: 'Fruver', composition: 'Papas lavadas calidad exportación', certified: true, stock: 30 },
-                    { id: 'f4', name: 'Zucchini fresco (kg)', category: 'Verdulería', price: 12000, image: '🥒', brand: 'Fruver', composition: 'Verdura de estación', certified: true, stock: 14 },
-                    { id: 'f5', name: 'Patas-muslos de Pollo (kg)', category: 'Carnicería', price: 32000, image: '🍗', brand: 'Avícola San Juan', composition: 'Pollo fresco trozado', certified: true, stock: 10 }
+                pastasLegumbres: [
+                    { id: 'f1', name: 'Fideos Tirabuzón de Quinoa x250g', category: 'Fideos', price: 4282, image: '🍝', brand: 'Tratenfú', composition: 'Quinoa y arroz', certified: true },
+                    { id: 'f2', name: 'Fideos Spaghettis de Maíz x250g', category: 'Fideos', price: 4282, image: '🍝', brand: 'Tratenfú', composition: '100% harina de maíz', certified: true },
+                    { id: 'f3', name: 'Porotos Alubia x600g', category: 'Legumbres', price: 3170, image: '🫘', brand: 'Grano Pampa', composition: 'Porotos seleccionados', certified: true },
+                    { id: 'f4', name: 'Garbanzos x600g', category: 'Legumbres', price: 3139, image: '🧆', brand: 'Grano Pampa', composition: 'Garbanzos naturales', certified: true }
                 ],
-                harinas: [
-                    { id: 'h1', name: 'Premezcla Universal sin TACC', category: 'Harinas', price: 10500, image: '🌾', brand: 'Santalucía', composition: 'Harina de arroz, almidón de maíz, goma xantana, sal', certified: true, stock: 12 },
-                    { id: 'h2', name: 'Harina de Almendras Premium', category: 'Harinas', price: 21000, image: '🥜', brand: 'NutriFit', composition: '100% almendra molida, sin aditivos', certified: true, stock: 6 }
+                snacksDulces: [
+                    { id: 's1', name: 'Galletitas Choco y Dulce de Leche x125g', category: 'Snacks', price: 2008, image: '🍪', brand: 'Praat', composition: 'Libre de gluten', certified: true },
+                    { id: 's2', name: 'Super Mix Brownies Chocolate x425g', category: 'Snacks', price: 3949, image: '🍫', brand: 'Gula', composition: 'Mezcla lista para brownies', certified: true },
+                    { id: 's3', name: 'Mermelada de Ciruela Light x330g', category: 'Dulces', price: 5079, image: '🍯', brand: 'La Tranquilina', composition: 'Ciruela, edulcorante', certified: true }
                 ],
-                snacks: [
-                    { id: 's1', name: 'Barra de Chocolate Algarroba', category: 'Snacks', price: 4800, image: '🍫', brand: 'Zafrán', composition: 'Algarroba, cacao, azúcar, aceite de coco', certified: true, stock: 18 },
-                    { id: 's2', name: 'Barrita de Quinua y Miel', category: 'Snacks', price: 4200, image: '🍱', brand: 'Crowie', composition: 'Quinua inflada, miel, almíbar, semillas', certified: true, stock: 14 }
-                ],
-                congelados: [
-                    { id: 'c1', name: 'Empanadas de Carne sin TACC (6u)', category: 'Congelados', price: 10800, image: '🥟', brand: 'La Celiaca', composition: 'Carne vacuna, cebolla, especias, masa de arroz', certified: true, stock: 10 }
+                otros: [
+                    { id: 'o1', name: 'Aceite de Salvado de Arroz x900cc', category: 'Aceites', price: 8723, image: '🍾', brand: 'Blue Patna', composition: 'Aceite de arroz', certified: true },
+                    { id: 'o2', name: 'Stevia Premium sin Sucralosa x100cc', category: 'Endulzantes', price: 5841, image: '🌿', brand: 'Trever', composition: 'Stevia líquida', certified: true }
                 ]
             };
 
             const allProducts = Object.values(products).flat();
 
             const communityRecipes = [
-                // (Mismas recetas, se mantienen igual)
                 {
-                    id: 'rec1',
-                    title: '🥣 Bowl tibio de quinoa y vegetales',
-                    image: '🥗',
-                    time: '25 minutos',
-                    servings: '2 porciones',
+                    id: 'rec1', title: '🍝 Fideos de Quinoa al pesto', image: 'https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&q=80&w=400', time: '20 min', servings: '2 porc.',
                     ingredients: [
-                        { text: '1 taza de quinoa', productId: 'a1' },
-                        { text: '1 zucchini', productId: 'f4' },
-                        { text: '1 zanahoria' },
-                        { text: '½ morrón rojo' },
-                        { text: '½ cebolla morada' },
-                        { text: '1 puñado de espinaca fresca' },
-                        { text: '2 cucharadas de aceite de oliva', productId: 'a3' },
-                        { text: 'Jugo de ½ limón' },
-                        { text: 'Sal, pimienta y pimentón ahumado' }
+                        { text: '1 paquete Fideos Tirabuzón de Quinoa', productId: 'f1' },
+                        { text: 'Aceite de salvado de arroz (2 cdas)', productId: 'o1' },
+                        { text: 'Albahaca fresca, ajo y nueces' }
                     ],
-                    steps: [
-                        'Lavar bien la quinoa y cocinarla según las indicaciones del paquete.',
-                        'Cortar los vegetales en cubos y saltearlos con aceite de oliva.',
-                        'Agregar la espinaca hasta que se marchite.',
-                        'Mezclar los vegetales con la quinoa.',
-                        'Condimentar con limón, sal, pimienta y pimentón.'
+                    steps: ['Hervir los fideos en abundante agua.', 'Procesar albahaca, ajo, aceite y nueces.', 'Mezclar y servir.']
+                },
+                {
+                    id: 'rec2', title: '🍫 Brownies súper húmedos', image: 'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&q=80&w=400', time: '40 min', servings: '8 porc.',
+                    ingredients: [
+                        { text: '1 Super Mix Brownies Chocolate', productId: 's2' },
+                        { text: '2 huevos y 100g de manteca' }
                     ],
-                    tip: 'Podés sumar pollo grillado, queso o garbanzos para aumentar el aporte de proteínas.'
+                    steps: ['Precalentar horno a 180°C.', 'Mezclar el mix con los huevos y manteca derretida.', 'Hornear por 25 min.']
+                },
+                 {
+                    id: 'rec3', title: '🧆 Hummus de Garbanzos Casero', image: 'https://images.unsplash.com/photo-1633504581786-316c8002b1b9?auto=format&fit=crop&q=80&w=400', time: '15 min', servings: '4 porc.',
+                    ingredients: [
+                        { text: '1 paquete de Garbanzos x600g', productId: 'f4' },
+                        { text: 'Aceite, ajo, pimentón y jugo de limón', productId: 'o1' }
+                    ],
+                    steps: ['Dejar los garbanzos en remojo y hervir.', 'Procesar con aceite, ajo y condimentos.', 'Servir con pimentón por encima.']
                 }
             ];
-
-            useEffect(() => {
-                try {
-                    const savedUser = localStorage.getItem('lapostaUser');
-                    const savedUserName = localStorage.getItem('lapostaUserName');
-                    const savedMembership = localStorage.getItem('lapostaMembership');
-                    
-                    if (savedUser) {
-                        setUserEmail(savedUser);
-                        const savedCartData = localStorage.getItem(`lapostaCart_${savedUser}`);
-                        if (savedCartData) setSavedCart(JSON.parse(savedCartData));
-
-                        const savedLastOrder = localStorage.getItem(`lapostaLastOrder_${savedUser}`);
-                        if (savedLastOrder) setLastOrder(JSON.parse(savedLastOrder));
-                    }
-                    if (savedUserName) setUserName(savedUserName);
-                    if (savedMembership) setHasMembership(JSON.parse(savedMembership));
-                } catch (e) {
-                    console.error("Error al cargar de localStorage", e);
-                }
-            }, []);
-
-            const calculatePrice = (product, quantity = 1) => {
-                let price = product.price;
-                if (hasMembership) price = price * 0.9;
-                if (quantity > 3) price = price * 0.95;
-                return Math.round(price);
-            };
 
             const calculateCartTotal = () => {
                 let subtotal = 0;
                 let totalItems = 0;
-                
                 cart.forEach(item => {
                     const qty = item.quantity || 1;
                     totalItems += qty;
-                    const unitPrice = calculatePrice(item, qty);
-                    subtotal += unitPrice * qty;
+                    subtotal += item.price * qty;
                 });
 
-                // Envío actualizado a 9000
-                const shipping = hasMembership ? 0 : 9000;
+                // Lógica de envíos y compra mínima solicitada
+                let shipping = 0;
+                if (subtotal < 100000 && subtotal > 0) {
+                    shipping = 9000;
+                }
                 const total = subtotal + shipping;
-
                 return { subtotal, total, shipping, totalItems };
             };
-
-            const generateOrderNumber = () => {
-                const timestamp = Date.now().toString().slice(-6);
-                const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-                return `LP-${timestamp}-${random}`;
-            };
-
-            const cartSummary = calculateCartTotal();
-
-            const isValidEmail = (email) => email.includes('@') && email.includes('.');
 
             const updateProductQuantity = (product, newQty) => {
                 const existingIndex = cart.findIndex(p => p.id === product.id);
@@ -202,337 +168,32 @@
                         setAddedNotification({ ...product, quantity: newQty });
                     }
                 } else {
-                    setCart([...cart, { ...product, quantity: newQty, cartId: Math.random() }]);
+                    setCart([...cart, { ...product, quantity: newQty }]);
                     setAddedNotification({ ...product, quantity: newQty });
                 }
             };
 
-            const handleLogout = () => {
-                if (confirm('¿Deseas salir y volver a la pantalla de inicio de sesión?')) {
-                    setCurrentPage('welcome');
-                    setUserEmail('');
-                    setUserName('');
-                    setCart([]);
-                    localStorage.removeItem('lapostaUser');
-                    localStorage.removeItem('lapostaUserName');
-                }
-            };
+            const cartSummary = calculateCartTotal();
+            const minOrderMet = cartSummary.subtotal >= 90000;
 
-            // 1. WELCOME PANTALLA REDISEÑADA
-            const renderWelcomePage = () => (
-                <div className="min-h-screen bg-amber-500 relative flex flex-col justify-between overflow-hidden max-w-md mx-auto">
-                    {/* Elementos decorativos de fondo */}
-                    <div className="absolute top-10 left-[-20px] text-6xl opacity-20 transform -rotate-12">🍞</div>
-                    <div className="absolute top-40 right-[-10px] text-7xl opacity-20 transform rotate-45">🥐</div>
-                    <div className="absolute bottom-80 left-10 text-5xl opacity-20 transform -rotate-45">🌾</div>
-
-                    {/* Logo y título (Arriba/Centro) */}
-                    <div className="relative z-10 flex-1 flex flex-col items-center justify-center p-6 text-center mt-8">
-                        <div className="text-8xl mb-4 drop-shadow-md">🌾</div>
-                        <h1 className="text-5xl font-extrabold text-white tracking-tight mb-2 drop-shadow-md">La Posta</h1>
-                        <p className="text-xl font-semibold text-amber-50 mb-6 drop-shadow">Tu mes sin TACC resuelto</p>
-                    </div>
-                    
-                    {/* Tarjeta de inicio (Abajo) estilo Instacart */}
-                    <div className="relative z-10 bg-white rounded-t-3xl p-6 w-full shadow-[0_-10px_40px_rgba(0,0,0,0.15)] pb-10">
-                        <h2 className="text-lg font-bold text-gray-800 mb-4 text-center">Ingresá para comprar</h2>
-                        
-                        <div className="space-y-3">
-                            <div>
-                                <input
-                                    type="email"
-                                    placeholder="Tu Email"
-                                    value={userEmail}
-                                    onChange={(e) => setUserEmail(e.target.value)}
-                                    className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm transition font-medium"
-                                />
-                            </div>
-
-                            <div>
-                                <input
-                                    type="text"
-                                    placeholder="Nombre (Opcional)"
-                                    value={userName}
-                                    onChange={(e) => setUserName(e.target.value)}
-                                    className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm transition font-medium"
-                                />
-                            </div>
-                            
-                            <button
-                                onClick={() => {
-                                    if (isValidEmail(userEmail)) {
-                                        const cleanEmail = userEmail.trim().toLowerCase();
-                                        const displayName = userName.trim() || cleanEmail.split('@')[0];
-                                        
-                                        setUserEmail(cleanEmail);
-                                        setUserName(displayName);
-                                        localStorage.setItem('lapostaUser', cleanEmail);
-                                        localStorage.setItem('lapostaUserName', displayName);
-                                        const saved = localStorage.getItem(`lapostaCart_${cleanEmail}`);
-                                        if (saved) setSavedCart(JSON.parse(saved));
-                                        const savedOrder = localStorage.getItem(`lapostaLastOrder_${cleanEmail}`);
-                                        if (savedOrder) setLastOrder(JSON.parse(savedOrder));
-                                        setCurrentPage('membership');
-                                    }
-                                }}
-                                disabled={!isValidEmail(userEmail)}
-                                className="w-full bg-amber-600 text-white py-3.5 rounded-xl font-bold disabled:bg-gray-300 disabled:text-gray-500 hover:bg-amber-700 transition text-sm mt-2"
-                            >
-                                Iniciar Sesión
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            );
-
-            // 2. MEMBERSHIP
-            const renderMembershipPage = () => (
-                <div className="min-h-screen bg-gradient-to-b from-purple-50 to-purple-100 p-6 max-w-md mx-auto flex flex-col justify-between">
-                    <div className="pt-4 space-y-4">
-                        <div className="text-center mb-2">
-                            <h2 className="text-2xl font-bold text-purple-900">¡Hola, {userName}! 👋</h2>
-                            <p className="text-xs text-purple-700">Usuario: {userEmail}</p>
-                        </div>
-
-                        <h2 className="text-md font-bold text-gray-800">Seleccioná tu plan:</h2>
-                        
-                        <div className="space-y-4">
-                            <div 
-                                onClick={() => {
-                                    setHasMembership(false);
-                                    localStorage.setItem('lapostaMembership', 'false');
-                                    setCurrentPage('home');
-                                }}
-                                className="bg-white p-5 rounded-xl border-2 border-gray-300 cursor-pointer hover:border-amber-500 transition shadow-sm space-y-2"
-                            >
-                                <p className="font-semibold text-base text-gray-800">Sin Membresía</p>
-                                <p className="text-xs text-gray-600">Ideal para probar la plataforma</p>
-                                <ul className="text-xs space-y-1 text-gray-600 pt-1">
-                                    <li>✓ Acceso a catálogo completo sin TACC</li>
-                                    <li>✓ Envío estándar: $9.000</li>
-                                    <li>✗ Sin descuentos especiales</li>
-                                </ul>
-                                <button className="w-full bg-gray-200 text-gray-800 py-2 rounded-lg font-semibold text-xs mt-2">
-                                    Empezar sin membresía
-                                </button>
-                            </div>
-
-                            <div 
-                                onClick={() => {
-                                    setHasMembership(true);
-                                    localStorage.setItem('lapostaMembership', 'true');
-                                    setCurrentPage('home');
-                                }}
-                                className="bg-gradient-to-br from-amber-100 to-amber-50 p-5 rounded-xl border-2 border-amber-500 cursor-pointer hover:shadow-md transition relative ring-2 ring-amber-300 space-y-2"
-                            >
-                                <span className="absolute -top-3 right-4 bg-amber-600 text-white text-[10px] px-2.5 py-0.5 rounded-full font-bold">MEJOR OPCIÓN</span>
-                                <p className="font-bold text-base text-amber-900">Membresía Mensual ✨</p>
-                                <p className="text-xl font-extrabold text-amber-800">10% OFF en todo</p>
-                                <ul className="text-xs space-y-1 text-amber-900 pt-1">
-                                    <li>✓ <strong>10% OFF</strong> en todo el catálogo</li>
-                                    <li>✓ <strong>+5% EXTRA</strong> si comprás más de 3 unidades</li>
-                                    <li>✓ <strong>Envío GRATIS</strong> en todas tus compras</li>
-                                </ul>
-                                <button className="w-full bg-amber-700 text-white py-2 rounded-lg font-bold text-xs hover:bg-amber-800 transition mt-2 shadow">
-                                    Activar membresía
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <button 
-                        onClick={handleLogout}
-                        className="text-xs text-gray-500 text-center underline py-4 hover:text-red-600"
-                    >
-                        🚪 Salir / Cambiar usuario
-                    </button>
-                </div>
-            );
-
-            // 3. HOME, 4. PRODUCT, 5. CART, 6. PROFILE, 7. CHECKOUT, 8. COMMUNITY 
-            // Todas se mantienen iguales estructuralmente, sólo cambia el costo de envío reflejado (Calculado dinámicamente arriba).
-
+            // VISTAS
             const renderHomePage = () => (
-                <div className="min-h-screen bg-gray-50 pb-20">
-                    <div className="bg-amber-700 text-white p-4 sticky top-0 z-10 shadow">
-                        <div className="flex justify-between items-center mb-1 max-w-md mx-auto">
-                            <h1 className="text-xl font-bold flex items-center gap-2">🌾 La Posta</h1>
-                            <div className="flex items-center gap-3">
-                                <button onClick={() => setCurrentPage('cart')} className="text-2xl relative">
-                                    🛒
-                                    {cart.length > 0 && (
-                                        <span className="absolute -top-1 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
-                                            {cartSummary.totalItems}
-                                        </span>
-                                    )}
-                                </button>
-                                <button onClick={handleLogout} title="Cerrar sesión" className="text-xl bg-amber-800/60 hover:bg-amber-800 p-1.5 rounded-lg transition">🚪</button>
-                            </div>
-                        </div>
-                        <div className="flex justify-between text-[11px] text-amber-100 max-w-md mx-auto">
-                            <span>Usuario: {userName || userEmail}</span>
-                            <span className="font-semibold">{hasMembership ? '⭐ Socio Activo (10% OFF)' : '👤 Estándar'}</span>
-                        </div>
+                <div className="min-h-screen bg-[#FDFDFD] pb-24 font-sans">
+                    {/* Header */}
+                    <div className="pt-12 pb-4 px-6 sticky top-0 bg-[#FDFDFD]/90 backdrop-blur-md z-10">
+                        <h1 className="text-3xl font-extrabold text-cp-green mb-1">Catálogo</h1>
+                        <p className="text-gray-600 text-sm">Precios al por mayor, 100% sin gluten.</p>
                     </div>
 
-                    <div className="bg-white border-b border-amber-200 p-3 shadow-sm">
-                        <div className="flex items-center gap-2 max-w-md mx-auto text-xs text-gray-700">
-                            <span className="text-green-600 text-base">✓</span>
-                            <span>Todos los productos están certificados sin TACC (SENASA)</span>
+                    <div className="px-6 space-y-4">
+                        {/* Banners tipo Cherrypick */}
+                        <div className="bg-cp-yellow rounded-2xl p-4 shadow-sm">
+                            <p className="font-bold text-cp-green text-sm">Envío gratis superando los $100.000</p>
+                            <p className="text-xs text-cp-green mt-1">Sino el costo es de aprox. $9.000</p>
                         </div>
-                    </div>
+                        <div className="bg-cp-blue rounded-2xl p-4 shadow-sm">
+                            <p className="font-bold text-cp-green text-sm">✨ Compra mínima mayor
 
-                    <div className="p-4 space-y-6 max-w-md mx-auto">
-                        {Object.entries({
-                            'Panificados': products.panificados,
-                            'Frescos y Almacén': products.frescosAlmacen,
-                            'Harinas': products.harinas,
-                            'Snacks': products.snacks,
-                            'Congelados': products.congelados
-                        }).map(([category, items]) => (
-                            <div key={category}>
-                                <h3 className="text-md font-bold text-gray-800 mb-3 border-b pb-1">{category}</h3>
-                                <div className="space-y-3">
-                                    {items.map(product => {
-                                        const inCart = cart.find(p => p.id === product.id);
-                                        const qty = inCart ? (inCart.quantity || 1) : 0;
-                                        const pricePerUnit = calculatePrice(product, qty || 1);
-                                        
-                                        return (
-                                            <div key={product.id} className="bg-white p-3.5 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition">
-                                                <div className="flex justify-between items-start gap-2">
-                                                    <div className="flex items-start gap-2.5 flex-1 cursor-pointer" onClick={() => setCurrentPage(`product-${product.id}`)}>
-                                                        <span className="text-3xl">{product.image}</span>
-                                                        <div>
-                                                            <span className="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-bold">{product.brand}</span>
-                                                            <p className="font-semibold text-xs text-gray-800 mt-0.5">{product.name}</p>
-                                                            <p className="text-xs font-bold text-amber-700 mt-1">${pricePerUnit}</p>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="flex flex-col items-end gap-2">
-                                                        <button onClick={() => setCurrentPage(`product-${product.id}`)} className="text-[11px] text-gray-500 hover:text-amber-700 underline">Ver info</button>
-                                                        {qty === 0 ? (
-                                                            <button onClick={() => updateProductQuantity(product, 1)} className="bg-amber-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-amber-800 transition">+ Agregar</button>
-                                                        ) : (
-                                                            <div className="flex items-center gap-1.5 bg-amber-50 p-1 rounded-lg border border-amber-200">
-                                                                <button onClick={() => updateProductQuantity(product, qty - 1)} className="w-6 h-6 bg-white text-amber-800 rounded font-bold shadow-sm flex items-center justify-center text-xs">−</button>
-                                                                <span className="text-xs font-bold text-amber-900 min-w-[16px] text-center">{qty}</span>
-                                                                <button onClick={() => updateProductQuantity(product, qty + 1)} className="w-6 h-6 bg-amber-700 text-white rounded font-bold shadow-sm flex items-center justify-center text-xs">+</button>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                    <BottomNav active="home" />
-                </div>
-            );
-
-            const renderProductPage = (productId) => { /* Igual que original */ return null; };
-
-            const renderCartPage = () => {
-                const { subtotal, total, shipping } = calculateCartTotal();
-
-                return (
-                    <div className="min-h-screen bg-gray-50 pb-24">
-                        <div className="bg-amber-700 text-white p-4 sticky top-0 z-10 shadow">
-                            <div className="flex justify-between items-center max-w-md mx-auto">
-                                <button onClick={() => setCurrentPage('home')} className="text-amber-100 text-xs">← Volver</button>
-                                <h1 className="text-lg font-bold">Mi Carrito 🛒</h1>
-                                <button onClick={handleLogout} className="text-lg">🚪</button>
-                            </div>
-                        </div>
-
-                        <div className="p-4 space-y-4 max-w-md mx-auto">
-                            {cart.length === 0 ? (
-                                <div className="p-8 text-center text-gray-500 space-y-2">
-                                    <p className="text-4xl">🛒</p>
-                                    <p className="text-sm font-medium">Tu carrito está vacío</p>
-                                    <button onClick={() => setCurrentPage('home')} className="mt-2 bg-amber-700 text-white text-xs px-4 py-2 rounded-lg font-bold">Explorar productos</button>
-                                </div>
-                            ) : (
-                                <>
-                                    <div className="space-y-3">
-                                        {cart.map((item, idx) => {
-                                            const qty = item.quantity || 1;
-                                            const pricePerUnit = calculatePrice(item, qty);
-                                            const itemTotal = pricePerUnit * qty;
-                                            return (
-                                                <div key={idx} className="bg-white p-3.5 rounded-xl border border-gray-200 shadow-sm flex justify-between items-center text-xs">
-                                                    <div>
-                                                        <p className="font-bold text-gray-800">{item.image} {item.name}</p>
-                                                        <p className="text-gray-500">${pricePerUnit} x {qty} = <strong className="text-amber-800">${itemTotal}</strong></p>
-                                                    </div>
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="flex items-center gap-1 bg-gray-100 p-1 rounded border">
-                                                            <button onClick={() => updateProductQuantity(item, qty - 1)} className="w-5 h-5 bg-white font-bold rounded shadow-xs">−</button>
-                                                            <span className="px-1 font-bold">{qty}</span>
-                                                            <button onClick={() => updateProductQuantity(item, qty + 1)} className="w-5 h-5 bg-white font-bold rounded shadow-xs">+</button>
-                                                        </div>
-                                                        <button onClick={() => updateProductQuantity(item, 0)} className="text-red-500 font-bold p-1">✕</button>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-
-                                    <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-2 text-xs">
-                                        <div className="flex justify-between text-gray-600"><span>Subtotal:</span><span>${subtotal}</span></div>
-                                        <div className="flex justify-between text-gray-600"><span>Envío:</span><span>{shipping === 0 ? '¡GRATIS!' : `$${shipping}`}</span></div>
-                                        <div className="flex justify-between font-bold text-sm border-t pt-2 text-gray-800"><span>Total:</span><span className="text-amber-700">${total}</span></div>
-                                    </div>
-
-                                    <button onClick={() => setCurrentPage('checkout')} className="w-full bg-amber-700 text-white py-3 rounded-lg font-bold text-sm hover:bg-amber-800 transition shadow">
-                                        Proceder al Pago
-                                    </button>
-                                </>
-                            )}
-                        </div>
-                        <BottomNav active="cart" />
-                    </div>
-                );
-            };
-
-            const renderCheckoutPage = () => { /* Se mantiene igual */ return null; };
-            const renderProfilePage = () => { /* Se mantiene igual */ return null; };
-            const renderCommunityPage = () => { /* Se mantiene igual */ return null; };
-
-            const BottomNav = ({ active }) => (
-                <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around p-2.5 z-20 max-w-md mx-auto shadow-lg">
-                    <button onClick={() => setCurrentPage('home')} className={`flex flex-col items-center text-[10px] font-bold ${active === 'home' ? 'text-amber-700' : 'text-gray-400'}`}><span className="text-xl">🏠</span>Catálogo</button>
-                    <button onClick={() => setCurrentPage('cart')} className={`flex flex-col items-center text-[10px] font-bold ${active === 'cart' ? 'text-amber-700' : 'text-gray-400'}`}><span className="text-xl">🛒</span>Carrito</button>
-                    <button onClick={() => setCurrentPage('profile')} className={`flex flex-col items-center text-[10px] font-bold ${active === 'profile' ? 'text-amber-700' : 'text-gray-400'}`}><span className="text-xl">👤</span>Perfil</button>
-                </div>
-            );
-
-            return (
-                <div className="relative min-h-screen">
-                    {currentPage === 'welcome' && renderWelcomePage()}
-                    {currentPage === 'membership' && renderMembershipPage()}
-                    {currentPage === 'home' && renderHomePage()}
-                    {currentPage === 'cart' && renderCartPage()}
-                    {/* Resto de vistas se mantienen según la estructura original */}
-                    
-                    {addedNotification && (
-                        <div className="fixed bottom-16 left-0 right-0 px-4 z-50 animate-slide-up max-w-md mx-auto">
-                            <div className="bg-gray-900 text-white p-3.5 rounded-xl shadow-2xl flex items-center justify-between gap-3 border border-gray-700">
-                                <p className="text-xs font-semibold truncate text-white">¡Agregado al carrito!</p>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            );
-        };
-
-        const container = document.getElementById('root');
-        const root = ReactDOM.createRoot(container);
-        root.render(<LaPostaMVP />);
-    </script>
-</body>
-</html>
+```python?code_reference&code_event_index=4
+import os
+print(os.listdir('.'))
