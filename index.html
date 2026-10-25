@@ -9,7 +9,7 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Babel -->
+    <!-- Babel Standalone -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
         body { 
@@ -37,40 +37,25 @@
 <body>
     <div id="root"></div>
 
-    <script type="text/babel" data-type="module" data-presets="react,env">
+    <script type="text/babel">
         const { useState, useEffect } = React;
-
-        // Capturador de errores para evitar pantallas blancas
-        class ErrorBoundary extends React.Component {
-            constructor(props) {
-                super(props);
-                this.state = { hasError: false, errorInfo: null };
-            }
-            static getDerivedStateFromError(error) {
-                return { hasError: true, errorInfo: error.message };
-            }
-            render() {
-                if (this.state.hasError) {
-                    return <div className="p-10 text-red-600 font-bold">Error en la aplicación: {this.state.errorInfo}</div>;
-                }
-                return this.props.children; 
-            }
-        }
 
         const LaPostaMVP = () => {
             const [currentPage, setCurrentPage] = useState('home');
             const [cart, setCart] = useState([]);
             const [addedNotification, setAddedNotification] = useState(null);
 
-            // Pop-up Notification Timer
+            // Temporizador de notificaciones
             useEffect(() => {
                 if (addedNotification) {
-                    const timer = setTimeout(() => setAddedNotification(null), 5000);
+                    const timer = setTimeout(() => {
+                        setAddedNotification(null);
+                    }, 5000);
                     return () => clearTimeout(timer);
                 }
             }, [addedNotification]);
 
-            // Catálogo actualizado
+            // Catálogo (Listado de precios)
             const products = {
                 harinas: [
                     { id: 'p1', name: 'Premezcla Universal x500g', price: 3127, image: '🌾', brand: 'Doña Pacha', category: 'Harinas' },
@@ -89,8 +74,11 @@
                 ]
             };
             
-            // Reemplazo compatible para navegadores que no soportan .flat()
-            const allProducts = Object.values(products).reduce((acc, val) => acc.concat(val), []);
+            // Función compatible para aplanar el array de productos
+            let allProducts = [];
+            for (const category in products) {
+                allProducts = allProducts.concat(products[category]);
+            }
 
             const recipes = [
                 { id: 'r1', title: 'Brownies súper húmedos', author: 'La Posta', image: 'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&q=80&w=400', mainProductId: 's2' },
@@ -101,18 +89,18 @@
             const calculateCart = () => {
                 let subtotal = 0;
                 let totalItems = 0;
-                cart.forEach(item => {
-                    const qty = item.quantity || 1;
+                for (let i = 0; i < cart.length; i++) {
+                    const qty = cart[i].quantity || 1;
                     totalItems += qty;
-                    subtotal += item.price * qty;
-                });
+                    subtotal += cart[i].price * qty;
+                }
 
-                // Lógica de envíos requerida
+                // Lógica de envíos
                 let shipping = 0;
                 if (subtotal > 0 && subtotal < 100000) {
                     shipping = 9000;
                 }
-                return { subtotal, total: subtotal + shipping, shipping, totalItems };
+                return { subtotal: subtotal, total: subtotal + shipping, shipping: shipping, totalItems: totalItems };
             };
 
             const cartData = calculateCart();
@@ -158,11 +146,11 @@
                             </div>
                         </div>
 
-                        {Object.entries(products).map(([cat, items]) => (
+                        {Object.keys(products).map(cat => (
                             <div key={cat} className="mb-6">
                                 <h2 className="text-xl font-bold text-cp-green mb-3 capitalize">{cat}</h2>
                                 <div className="space-y-3">
-                                    {items.map(p => {
+                                    {products[cat].map(p => {
                                         const cartItem = cart.find(c => c.id === p.id);
                                         const qty = cartItem ? cartItem.quantity : 0;
                                         return (
@@ -278,7 +266,7 @@
 
                             <button 
                                 disabled={!minOrderMet}
-                                className={`w-full py-4 rounded-full font-bold text-sm mt-4 transition shadow-md ${minOrderMet ? 'bg-cp-green text-white' : 'bg-gray-300 text-gray-500'}`}
+                                className={`w-full py-4 rounded-full font-bold text-sm mt-4 transition shadow-md ${minOrderMet ? 'bg-cp-green text-white' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
                             >
                                 Ir a Pagar
                             </button>
@@ -334,8 +322,9 @@
             );
         };
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<ErrorBoundary><LaPostaMVP/></ErrorBoundary>);
+        const container = document.getElementById('root');
+        const root = ReactDOM.createRoot(container);
+        root.render(<LaPostaMVP />);
     </script>
 </body>
 </html>
