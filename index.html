@@ -3,40 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>La Posta - MVP Integrado</title>
+    <title>La Posta - MVP</title>
     <!-- React 18 & ReactDOM -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script crossorigin src="[https://unpkg.com/react@18/umd/react.production.min.js](https://unpkg.com/react@18/umd/react.production.min.js)"></script>
+    <script crossorigin src="[https://unpkg.com/react-dom@18/umd/react-dom.production.min.js](https://unpkg.com/react-dom@18/umd/react-dom.production.min.js)"></script>
     <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Babel Standalone -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
+    <!-- Babel -->
+    <script src="[https://unpkg.com/@babel/standalone/babel.min.js](https://unpkg.com/@babel/standalone/babel.min.js)"></script>
     <style>
         body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: #FAFAFA;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #FCFBFB;
         }
         @keyframes slideUp {
             from { transform: translateY(100%); opacity: 0; }
             to { transform: translateY(0); opacity: 1; }
         }
-        .animate-slide-up {
-            animation: slideUp 0.3s ease-out forwards;
-        }
-        .hide-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        .hide-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-        /* Colores Cherrypick style */
+        .animate-slide-up { animation: slideUp 0.3s ease-out forwards; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* Cherrypick Palette */
         .text-cp-green { color: #0E472A; }
         .bg-cp-green { background-color: #0E472A; }
         .bg-cp-yellow { background-color: #E2FF33; }
         .bg-cp-blue { background-color: #D3F3FA; }
         .text-cp-purple { color: #511C3D; }
         .border-cp-purple { border-color: #8C4B78; }
+        .bg-cp-purple-light { background-color: #F8F0F6; }
     </style>
 </head>
 <body>
@@ -46,99 +41,45 @@
         const { useState, useEffect } = React;
 
         const LaPostaMVP = () => {
-            const [currentPage, setCurrentPage] = useState('welcome');
+            const [currentPage, setCurrentPage] = useState('home');
             const [cart, setCart] = useState([]);
-            const [savedCart, setSavedCart] = useState(null);
-            const [userEmail, setUserEmail] = useState('');
-            const [userName, setUserName] = useState('');
-            const [hasMembership, setHasMembership] = useState(false);
-            const [lastOrder, setLastOrder] = useState(null);
             const [addedNotification, setAddedNotification] = useState(null);
-            
-            // Checkout state
-            const [orderPlaced, setOrderPlaced] = useState(false);
-            const [generatedOrderNumber, setGeneratedOrderNumber] = useState('');
-            const [address, setAddress] = useState('');
-            const [paymentMethod, setPaymentMethod] = useState('mercadopago');
-            const [selectedDeliveryDate, setSelectedDeliveryDate] = useState('');
-            const [selectedTimeSlot, setSelectedTimeSlot] = useState('09:00 - 13:00');
-            const [deliveryNotes, setDeliveryNotes] = useState('');
-            const [surveyCompleted, setSurveyCompleted] = useState(false);
 
+            // Pop-up Notification Timer
             useEffect(() => {
                 if (addedNotification) {
-                    const timer = setTimeout(() => setAddedNotification(null), 6000);
+                    const timer = setTimeout(() => setAddedNotification(null), 5000);
                     return () => clearTimeout(timer);
                 }
             }, [addedNotification]);
 
-            const getMinDeliveryDate = () => {
-                const date = new Date();
-                let addedDays = 0;
-                while (addedDays < 3) {
-                    date.setDate(date.getDate() + 1);
-                    if (date.getDay() !== 0 && date.getDay() !== 6) addedDays++;
-                }
-                return date.toISOString().split('T')[0];
-            };
-            const minDateStr = getMinDeliveryDate();
-
-            // Productos actualizados según Listado de precios_2.xlsx
+            // Catálogo actualizado desde Listado de precios_2.xlsx
             const products = {
+                harinas: [
+                    { id: 'p1', name: 'Premezcla Universal x500g', price: 3127, image: '🌾', brand: 'Doña Pacha', category: 'Harinas' },
+                    { id: 'p2', name: 'Harina Integral de Porotos Mung x400g', price: 1879, image: '🫘', brand: 'Molino de Piedras', category: 'Harinas' },
+                    { id: 'p3', name: 'Rebozador sin gluten x500g', price: 3635, image: '🍞', brand: 'Doña Pacha', category: 'Harinas' }
+                ],
                 almacen: [
-                    { id: 'p1', name: 'Premezcla Universal x500g', category: 'Harinas', price: 3127, image: '🌾', brand: 'Doña Pacha', composition: 'Harina de arroz, almidón de maíz, goma xantana', certified: true },
-                    { id: 'p2', name: 'Premezcla Universal x500g', category: 'Harinas', price: 3166, image: '🌾', brand: 'YAMAY', composition: 'Premezcla certificada sin gluten', certified: true },
-                    { id: 'p3', name: 'Harina Integral Porotos Mung x400g', category: 'Harinas', price: 1879, image: '🫘', brand: 'Molino de Piedras', composition: '100% Porotos mung', certified: true },
-                    { id: 'p4', name: 'Rebozador sin gluten x500g', category: 'Rebozadores', price: 3635, image: '🍞', brand: 'Doña Pacha', composition: 'Harina de arroz y maíz extrusionado', certified: true }
+                    { id: 'f1', name: 'Fideos Tirabuzón de Quinoa x250g', price: 4282, image: '🍝', brand: 'Tratenfú', category: 'Fideos' },
+                    { id: 'f2', name: 'Porotos Alubia x600g', price: 3170, image: '🫘', brand: 'Grano Pampa', category: 'Legumbres' },
+                    { id: 'f3', name: 'Garbanzos x600g', price: 3139, image: '🧆', brand: 'Grano Pampa', category: 'Legumbres' }
                 ],
-                pastasLegumbres: [
-                    { id: 'f1', name: 'Fideos Tirabuzón de Quinoa x250g', category: 'Fideos', price: 4282, image: '🍝', brand: 'Tratenfú', composition: 'Quinoa y arroz', certified: true },
-                    { id: 'f2', name: 'Fideos Spaghettis de Maíz x250g', category: 'Fideos', price: 4282, image: '🍝', brand: 'Tratenfú', composition: '100% harina de maíz', certified: true },
-                    { id: 'f3', name: 'Porotos Alubia x600g', category: 'Legumbres', price: 3170, image: '🫘', brand: 'Grano Pampa', composition: 'Porotos seleccionados', certified: true },
-                    { id: 'f4', name: 'Garbanzos x600g', category: 'Legumbres', price: 3139, image: '🧆', brand: 'Grano Pampa', composition: 'Garbanzos naturales', certified: true }
-                ],
-                snacksDulces: [
-                    { id: 's1', name: 'Galletitas Choco y Dulce de Leche x125g', category: 'Snacks', price: 2008, image: '🍪', brand: 'Praat', composition: 'Libre de gluten', certified: true },
-                    { id: 's2', name: 'Super Mix Brownies Chocolate x425g', category: 'Snacks', price: 3949, image: '🍫', brand: 'Gula', composition: 'Mezcla lista para brownies', certified: true },
-                    { id: 's3', name: 'Mermelada de Ciruela Light x330g', category: 'Dulces', price: 5079, image: '🍯', brand: 'La Tranquilina', composition: 'Ciruela, edulcorante', certified: true }
-                ],
-                otros: [
-                    { id: 'o1', name: 'Aceite de Salvado de Arroz x900cc', category: 'Aceites', price: 8723, image: '🍾', brand: 'Blue Patna', composition: 'Aceite de arroz', certified: true },
-                    { id: 'o2', name: 'Stevia Premium sin Sucralosa x100cc', category: 'Endulzantes', price: 5841, image: '🌿', brand: 'Trever', composition: 'Stevia líquida', certified: true }
+                snacks: [
+                    { id: 's1', name: 'Galletitas Choco y Dulce de Leche x125g', price: 2008, image: '🍪', brand: 'Praat', category: 'Snacks' },
+                    { id: 's2', name: 'Super Mix Brownies Chocolate x425g', price: 3949, image: '🍫', brand: 'Gula', category: 'Snacks' },
+                    { id: 'o1', name: 'Aceite de Salvado de Arroz x900cc', price: 8723, image: '🍾', brand: 'Blue Patna', category: 'Aceites' }
                 ]
             };
-
             const allProducts = Object.values(products).flat();
 
-            const communityRecipes = [
-                {
-                    id: 'rec1', title: '🍝 Fideos de Quinoa al pesto', image: 'https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&q=80&w=400', time: '20 min', servings: '2 porc.',
-                    ingredients: [
-                        { text: '1 paquete Fideos Tirabuzón de Quinoa', productId: 'f1' },
-                        { text: 'Aceite de salvado de arroz (2 cdas)', productId: 'o1' },
-                        { text: 'Albahaca fresca, ajo y nueces' }
-                    ],
-                    steps: ['Hervir los fideos en abundante agua.', 'Procesar albahaca, ajo, aceite y nueces.', 'Mezclar y servir.']
-                },
-                {
-                    id: 'rec2', title: '🍫 Brownies súper húmedos', image: 'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&q=80&w=400', time: '40 min', servings: '8 porc.',
-                    ingredients: [
-                        { text: '1 Super Mix Brownies Chocolate', productId: 's2' },
-                        { text: '2 huevos y 100g de manteca' }
-                    ],
-                    steps: ['Precalentar horno a 180°C.', 'Mezclar el mix con los huevos y manteca derretida.', 'Hornear por 25 min.']
-                },
-                 {
-                    id: 'rec3', title: '🧆 Hummus de Garbanzos Casero', image: 'https://images.unsplash.com/photo-1633504581786-316c8002b1b9?auto=format&fit=crop&q=80&w=400', time: '15 min', servings: '4 porc.',
-                    ingredients: [
-                        { text: '1 paquete de Garbanzos x600g', productId: 'f4' },
-                        { text: 'Aceite, ajo, pimentón y jugo de limón', productId: 'o1' }
-                    ],
-                    steps: ['Dejar los garbanzos en remojo y hervir.', 'Procesar con aceite, ajo y condimentos.', 'Servir con pimentón por encima.']
-                }
+            const recipes = [
+                { id: 'r1', title: 'Brownies súper húmedos', author: 'La Posta', image: '[https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&q=80&w=400](https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&q=80&w=400)', mainProductId: 's2' },
+                { id: 'r2', title: 'Fideos de Quinoa al pesto', author: 'Comunidad', image: '[https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&q=80&w=400](https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&q=80&w=400)', mainProductId: 'f1' },
+                { id: 'r3', title: 'Hummus de Garbanzos Casero', author: 'La Posta', image: '[https://images.unsplash.com/photo-1633504581786-316c8002b1b9?auto=format&fit=crop&q=80&w=400](https://images.unsplash.com/photo-1633504581786-316c8002b1b9?auto=format&fit=crop&q=80&w=400)', mainProductId: 'f3' }
             ];
 
-            const calculateCartTotal = () => {
+            const calculateCart = () => {
                 let subtotal = 0;
                 let totalItems = 0;
                 cart.forEach(item => {
@@ -147,53 +88,230 @@
                     subtotal += item.price * qty;
                 });
 
-                // Lógica de envíos y compra mínima solicitada
+                // Lógica de envíos requerida
                 let shipping = 0;
-                if (subtotal < 100000 && subtotal > 0) {
+                if (subtotal > 0 && subtotal < 100000) {
                     shipping = 9000;
                 }
-                const total = subtotal + shipping;
-                return { subtotal, total, shipping, totalItems };
+                return { subtotal, total: subtotal + shipping, shipping, totalItems };
             };
 
-            const updateProductQuantity = (product, newQty) => {
-                const existingIndex = cart.findIndex(p => p.id === product.id);
+            const cartData = calculateCart();
+            const minOrderMet = cartData.subtotal >= 90000;
+
+            const updateQty = (product, newQty) => {
+                const existing = cart.findIndex(p => p.id === product.id);
                 if (newQty <= 0) {
                     setCart(cart.filter(p => p.id !== product.id));
-                } else if (existingIndex >= 0) {
+                } else if (existing >= 0) {
                     const updated = [...cart];
-                    updated[existingIndex].quantity = newQty;
+                    updated[existing].quantity = newQty;
                     setCart(updated);
-                    if (newQty > (cart[existingIndex].quantity || 0)) {
-                        setAddedNotification({ ...product, quantity: newQty });
-                    }
+                    if (newQty > cart[existing].quantity) setAddedNotification(product);
                 } else {
                     setCart([...cart, { ...product, quantity: newQty }]);
-                    setAddedNotification({ ...product, quantity: newQty });
+                    setAddedNotification(product);
                 }
             };
 
-            const cartSummary = calculateCartTotal();
-            const minOrderMet = cartSummary.subtotal >= 90000;
-
-            // VISTAS
-            const renderHomePage = () => (
-                <div className="min-h-screen bg-[#FDFDFD] pb-24 font-sans">
-                    {/* Header */}
-                    <div className="pt-12 pb-4 px-6 sticky top-0 bg-[#FDFDFD]/90 backdrop-blur-md z-10">
-                        <h1 className="text-3xl font-extrabold text-cp-green mb-1">Catálogo</h1>
-                        <p className="text-gray-600 text-sm">Precios al por mayor, 100% sin gluten.</p>
-                    </div>
-
-                    <div className="px-6 space-y-4">
-                        {/* Banners tipo Cherrypick */}
-                        <div className="bg-cp-yellow rounded-2xl p-4 shadow-sm">
-                            <p className="font-bold text-cp-green text-sm">Envío gratis superando los $100.000</p>
-                            <p className="text-xs text-cp-green mt-1">Sino el costo es de aprox. $9.000</p>
+            // VISTA INICIO / CATÁLOGO
+            const renderHome = () => (
+                <div className="pb-24">
+                    <div className="pt-12 px-5 bg-[#FCFBFB]">
+                        <h1 className="text-4xl font-extrabold text-cp-green tracking-tight">Catálogo</h1>
+                        <p className="text-gray-600 text-sm mt-1 mb-5">Encontrá tus favoritos 100% sin gluten.</p>
+                        
+                        <div className="flex gap-2 overflow-x-auto hide-scrollbar mb-6 pb-2">
+                            <button className="whitespace-nowrap px-4 py-1.5 rounded-full border border-cp-purple text-cp-purple text-sm font-semibold bg-cp-purple-light">Q Buscar</button>
+                            <button className="whitespace-nowrap px-4 py-1.5 rounded-full border border-cp-purple text-cp-purple text-sm font-semibold">Guardados</button>
+                            <button className="whitespace-nowrap px-4 py-1.5 rounded-full border border-cp-purple text-cp-purple text-sm font-semibold">Mis compras</button>
                         </div>
-                        <div className="bg-cp-blue rounded-2xl p-4 shadow-sm">
-                            <p className="font-bold text-cp-green text-sm">✨ Compra mínima mayor
 
-```python?code_reference&code_event_index=4
-import os
-print(os.listdir('.'))
+                        <div className="space-y-3 mb-8">
+                            <div className="bg-cp-yellow rounded-xl p-4 cursor-pointer">
+                                <h3 className="font-bold text-cp-green text-sm">🚚 Envío gratis superando los $100.000</h3>
+                                <p className="text-xs text-cp-green opacity-90 mt-0.5">Si tu compra es menor, el costo es de $9.000.</p>
+                            </div>
+                            <div className="bg-cp-blue rounded-xl p-4">
+                                <h3 className="font-bold text-cp-green text-sm">✨ Compra mínima mayorista</h3>
+                                <p className="text-xs text-cp-green opacity-90 mt-0.5">El monto mínimo para realizar un pedido es de $90.000.</p>
+                            </div>
+                        </div>
+
+                        {Object.entries(products).map(([cat, items]) => (
+                            <div key={cat} className="mb-6">
+                                <h2 className="text-xl font-bold text-cp-green mb-3 capitalize">{cat}</h2>
+                                <div className="space-y-3">
+                                    {items.map(p => {
+                                        const qty = cart.find(c => c.id === p.id)?.quantity || 0;
+                                        return (
+                                            <div key={p.id} className="flex bg-white p-3 rounded-2xl shadow-sm border border-gray-100 items-center justify-between">
+                                                <div className="flex items-center gap-3">
+                                                    <span className="text-3xl bg-gray-50 p-2 rounded-xl">{p.image}</span>
+                                                    <div>
+                                                        <p className="text-[10px] text-gray-500 font-bold uppercase">{p.brand}</p>
+                                                        <p className="font-bold text-cp-green text-sm leading-tight">{p.name}</p>
+                                                        <p className="font-bold text-cp-purple mt-1">${p.price}</p>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    {qty === 0 ? (
+                                                        <button onClick={() => updateQty(p, 1)} className="bg-cp-green text-white w-8 h-8 rounded-full font-bold shadow-md">+</button>
+                                                    ) : (
+                                                        <div className="flex items-center gap-2 bg-gray-100 rounded-full px-2 py-1">
+                                                            <button onClick={() => updateQty(p, qty-1)} className="text-cp-green font-bold w-6 h-6">-</button>
+                                                            <span className="text-xs font-bold w-3 text-center">{qty}</span>
+                                                            <button onClick={() => updateQty(p, qty+1)} className="text-cp-green font-bold w-6 h-6">+</button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+
+            // VISTA COMUNIDAD / RECETAS
+            const renderCommunity = () => (
+                <div className="pb-24 pt-12 px-5">
+                    <h1 className="text-4xl font-extrabold text-cp-green tracking-tight">Comunidad</h1>
+                    <p className="text-gray-600 text-sm mt-1 mb-6">Recetas sin gluten para inspirarte.</p>
+
+                    <h2 className="text-xl font-bold text-cp-green mb-3">Top picks for you</h2>
+                    
+                    <div className="flex overflow-x-auto gap-4 hide-scrollbar pb-4">
+                        {recipes.map(r => {
+                            const prod = allProducts.find(p => p.id === r.mainProductId);
+                            return (
+                            <div key={r.id} className="min-w-[240px] bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex-shrink-0">
+                                <img src={r.image} alt={r.title} className="w-full h-40 object-cover" />
+                                <div className="p-4 relative">
+                                    <div className="absolute -top-6 left-4 bg-white p-1.5 rounded-full shadow-md text-xl">
+                                        👨‍🍳
+                                    </div>
+                                    <h3 className="font-bold text-cp-green text-lg mt-2 leading-tight">{r.title}</h3>
+                                    <p className="text-xs text-gray-500 mt-1">Por {r.author}</p>
+                                    
+                                    <div className="mt-4 pt-3 border-t border-gray-100">
+                                        <p className="text-[10px] uppercase font-bold text-gray-400 mb-2">Ingrediente principal:</p>
+                                        <div className="flex justify-between items-center">
+                                            <p className="text-xs font-semibold text-cp-green truncate w-32">{prod?.name}</p>
+                                            <button onClick={() => updateQty(prod, (cart.find(c => c.id === prod.id)?.quantity || 0) + 1)} className="text-[10px] bg-cp-green text-white px-3 py-1.5 rounded-full font-bold">
+                                                Agregar
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )})}
+                    </div>
+                </div>
+            );
+
+            // VISTA CARRITO
+            const renderCart = () => (
+                <div className="pb-24 pt-12 px-5">
+                    <h1 className="text-4xl font-extrabold text-cp-green tracking-tight">Carrito</h1>
+                    
+                    {cart.length === 0 ? (
+                        <p className="text-gray-500 mt-5">Tu carrito está vacío.</p>
+                    ) : (
+                        <div className="mt-6 space-y-4">
+                            {cart.map(item => (
+                                <div key={item.id} className="flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+                                    <div>
+                                        <p className="font-bold text-cp-green text-sm">{item.name}</p>
+                                        <p className="text-cp-purple font-semibold text-xs mt-1">${item.price} x {item.quantity} =${item.price * item.quantity}</p>
+                                    </div>
+                                    <div className="flex items-center gap-2 bg-gray-100 rounded-full px-2 py-1">
+                                        <button onClick={() => updateQty(item, item.quantity-1)} className="text-cp-green font-bold px-2">-</button>
+                                        <span className="text-xs font-bold">{item.quantity}</span>
+                                        <button onClick={() => updateQty(item, item.quantity+1)} className="text-cp-green font-bold px-2">+</button>
+                                    </div>
+                                </div>
+                            ))}
+
+                            <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 mt-6 space-y-2 text-sm">
+                                <div className="flex justify-between text-gray-600"><span>Subtotal:</span><span>${cartData.subtotal}</span></div>
+                                <div className="flex justify-between text-gray-600">
+                                    <span>Envío:</span>
+                                    <span>{cartData.shipping === 0 ? <span className="text-green-600 font-bold">Gratis</span> : `$${cartData.shipping}`}</span>
+                                </div>
+                                <div className="flex justify-between font-bold text-lg text-cp-green border-t pt-3 mt-2">
+                                    <span>Total:</span><span>${cartData.total}</span>
+                                </div>
+                            </div>
+
+                            {!minOrderMet && (
+                                <div className="bg-red-50 text-red-700 p-3 rounded-xl text-xs font-bold text-center border border-red-200">
+                                    Faltan ${90000 - cartData.subtotal} para alcanzar el mínimo de compra mayorista ($90.000).
+                                </div>
+                            )}
+
+                            <button 
+                                disabled={!minOrderMet}
+                                className={`w-full py-4 rounded-full font-bold text-sm mt-4 transition shadow-md ${minOrderMet ? 'bg-cp-green text-white' : 'bg-gray-300 text-gray-500'}`}
+                            >
+                                Ir a Pagar
+                            </button>
+                        </div>
+                    )}
+                </div>
+            );
+
+            return (
+                <div className="relative min-h-screen max-w-md mx-auto bg-[#FCFBFB] shadow-2xl overflow-hidden">
+                    {currentPage === 'home' && renderHome()}
+                    {currentPage === 'community' && renderCommunity()}
+                    {currentPage === 'cart' && renderCart()}
+
+                    {/* Pop-up de Notificación "Agregado al carrito" con botón Ir a Pagar */}
+                    {addedNotification && (
+                        <div className="fixed bottom-24 left-0 right-0 px-5 z-50 animate-slide-up max-w-md mx-auto">
+                            <div className="bg-cp-green text-white p-3 rounded-2xl shadow-xl flex items-center justify-between border border-[#165e38]">
+                                <div className="flex items-center gap-3">
+                                    <span className="text-2xl">{addedNotification.image}</span>
+                                    <div>
+                                        <p className="text-[10px] text-cp-yellow font-bold uppercase tracking-wider">Agregado al carrito</p>
+                                        <p className="text-xs font-semibold truncate w-32">{addedNotification.name}</p>
+                                    </div>
+                                </div>
+                                <button 
+                                    onClick={() => { setAddedNotification(null); setCurrentPage('cart'); }}
+                                    className="bg-white text-cp-green text-xs font-bold px-4 py-2 rounded-full whitespace-nowrap shadow-sm"
+                                >
+                                    Ir a Pagar
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Bottom Nav estilo Cherrypick */}
+                    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 flex justify-around p-3 z-40 max-w-md mx-auto pb-6">
+                        <button onClick={() => setCurrentPage('home')} className={`flex flex-col items-center gap-1 ${currentPage === 'home' ? 'text-cp-green' : 'text-gray-400'}`}>
+                            <span className="text-xl">📋</span>
+                            <span className="text-[10px] font-bold">Catálogo</span>
+                        </button>
+                        <button onClick={() => setCurrentPage('cart')} className={`flex flex-col items-center gap-1 relative ${currentPage === 'cart' ? 'text-cp-green' : 'text-gray-400'}`}>
+                            <span className="text-xl">🛍️</span>
+                            {cartData.totalItems > 0 && <span className="absolute -top-1 -right-2 bg-red-500 text-white text-[9px] rounded-full w-4 h-4 flex items-center justify-center font-bold">{cartData.totalItems}</span>}
+                            <span className="text-[10px] font-bold">Shop</span>
+                        </button>
+                        <button onClick={() => setCurrentPage('community')} className={`flex flex-col items-center gap-1 ${currentPage === 'community' ? 'text-cp-green' : 'text-gray-400'}`}>
+                            <span className="text-xl">👨‍🍳</span>
+                            <span className="text-[10px] font-bold">Comunidad</span>
+                        </button>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<LaPostaMVP/>);
+    </script>
+</body>
+</html>
