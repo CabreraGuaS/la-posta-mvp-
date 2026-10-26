@@ -3,7 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>La Posta - MVP Integrado</title>
+    <title>La Posta - MVP Sin Gluten</title>
+    <!-- Google Fonts: Plus Jakarta Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- React 18 & ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -12,20 +16,39 @@
     <!-- Babel Standalone para transformar JSX -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #F9FAFB; }
+        body { 
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif; 
+            background-color: #F8FAFC; 
+            color: #0F172A;
+            -webkit-tap-highlight-color: transparent;
+        }
         
         @keyframes slideUp {
             from { transform: translateY(100%); opacity: 0; }
             to { transform: translateY(0); opacity: 1; }
         }
         .animate-slide-up {
-            animation: slideUp 0.3s ease-out forwards;
+            animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;  
+            overflow: hidden;
+        }
+        .soft-card {
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.03), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+        }
+        .soft-card-hover:hover {
+            box-shadow: 0 20px 30px -10px rgba(217, 119, 6, 0.12);
+            transform: translateY(-2px);
+        }
     </style>
 </head>
-<body class="bg-gray-100">
+<body class="bg-slate-50 antialiased selection:bg-amber-100 selection:text-amber-900">
     <div id="root"></div>
 
     <script type="text/babel">
@@ -34,14 +57,18 @@
         const LaPostaMVP = () => {
             const [currentPage, setCurrentPage] = useState('welcome');
             const [cart, setCart] = useState([]);
-            const [savedCart, setSavedCart] = useState(null);
             const [userEmail, setUserEmail] = useState('');
             const [userName, setUserName] = useState('');
             const [hasMembership, setHasMembership] = useState(false);
+            const [activeCategory, setActiveCategory] = useState('Todos');
+            const [searchQuery, setSearchQuery] = useState('');
+            const [bannerSlide, setBannerSlide] = useState(0);
+            const [wishlist, setWishlist] = useState([]);
 
             const [lastOrder, setLastOrder] = useState(null);
             const [addedNotification, setAddedNotification] = useState(null);
 
+            // Checkout state
             const [orderPlaced, setOrderPlaced] = useState(false);
             const [generatedOrderNumber, setGeneratedOrderNumber] = useState('');
             const [address, setAddress] = useState('');
@@ -74,61 +101,79 @@
 
             const minDateStr = getMinDeliveryDate();
 
-            // Catálogo con precios actualizados según listado
+            // Catálogo completo (21 productos sin gluten)
             const products = {
-                harinas: [
-                    { id: 'h1', name: 'Premezcla Universal x500g', category: 'Harinas', price: 3127, image: '🌾', brand: 'Doña Pacha', composition: 'Harina de arroz, almidón de maíz', certified: true, stock: 15 },
-                    { id: 'h2', name: 'Premezcla Universal x500g', category: 'Harinas', price: 3166, image: '🌾', brand: 'YAMAY', composition: 'Certificada sin gluten', certified: true, stock: 10 },
-                    { id: 'h3', name: 'Harina Integral de Porotos Mung x400g', category: 'Harinas', price: 1879, image: '🫘', brand: 'Molino de Piedras', composition: '100% Porotos mung', certified: true, stock: 20 },
-                    { id: 'h4', name: 'Premezcla para Cookies x200g', category: 'Harinas', price: 10784, image: '🍪', brand: 'EMM', composition: 'Extra nutritivas', certified: true, stock: 12 }
+                harinasRebozadores: [
+                    { id: 'p1', name: 'Premezcla Universal x500g', price: 3127, image: '🌾', brand: 'Doña Pacha', category: 'Harinas y Rebozadores', rating: 4.9, reviews: 32, composition: 'Almidón de maíz, harina de arroz, fécula de mandioca.' },
+                    { id: 'p2', name: 'Premezcla Universal x500g', price: 3166, image: '🌾', brand: 'YAMAY', category: 'Harinas y Rebozadores', rating: 4.8, reviews: 24, composition: 'Almidón de maíz, harina de arroz, fécula de mandioca.' },
+                    { id: 'p3', name: 'Harina Integral de Porotos Mung x400g', price: 1879, image: '🫘', brand: 'Molino de Piedras', category: 'Harinas y Rebozadores', rating: 4.7, reviews: 19, composition: '100% Harina de porotos mung sin gluten.' },
+                    { id: 'p4', name: 'Premezcla para Cookies Nutritivas x200g', price: 10784, image: '🍪', brand: 'EMM', category: 'Harinas y Rebozadores', rating: 5.0, reviews: 41, composition: 'Harina de arroz, azúcar, leudante.' },
+                    { id: 'p17', name: 'Pan Rallado Sin Gluten x500g', price: 5316, image: '🍞', brand: 'Inti Pan', category: 'Harinas y Rebozadores', rating: 4.6, reviews: 15, composition: 'Pan sin gluten rallado, sal, levadura.' },
+                    { id: 'p18', name: 'Rebozador sin gluten x500g', price: 3635, image: '🍞', brand: 'Doña Pacha', category: 'Harinas y Rebozadores', rating: 4.8, reviews: 28, composition: 'Harina de arroz, fécula de mandioca, sal.' }
                 ],
                 fideosLegumbres: [
-                    { id: 'f1', name: 'Fideos Tirabuzón de Quinoa x250g', category: 'Fideos', price: 4282, image: '🍝', brand: 'Tratenfú', composition: 'Quinoa y maíz', certified: true, stock: 10 },
-                    { id: 'f2', name: 'Tirabuzones al Huevo x300g', category: 'Fideos', price: 3171, image: '🍝', brand: 'El Colono', composition: 'Fideos al huevo libres de gluten', certified: true, stock: 12 },
-                    { id: 'f3', name: 'Porotos Alubia x600g', category: 'Legumbres', price: 3170, image: '🫘', brand: 'Grano Pampa', composition: 'Porotos alubia seleccionados', certified: true, stock: 15 },
-                    { id: 'f4', name: 'Garbanzos x600g', category: 'Legumbres', price: 3139, image: '🧆', brand: 'Grano Pampa', composition: 'Garbanzos naturales', certified: true, stock: 20 }
+                    { id: 'p5', name: 'Fideos Tirabuzón de Quinoa x250g', price: 4282, image: '🍝', brand: 'Tratenfú', category: 'Fideos y Legumbres', rating: 4.9, reviews: 53, composition: 'Harina de quinoa, harina de arroz, agua.' },
+                    { id: 'p6', name: 'Fideos Spaghettis de Maíz x250g', price: 4282, image: '🍝', brand: 'Tratenfú', category: 'Fideos y Legumbres', rating: 4.7, reviews: 22, composition: '100% Harina de maíz, agua.' },
+                    { id: 'p7', name: 'Tirabuzones al Huevo x300g', price: 3171, image: '🍝', brand: 'El Colono', category: 'Fideos y Legumbres', rating: 4.8, reviews: 30, composition: 'Harina de arroz, almidón de maíz, huevo.' },
+                    { id: 'p8', name: 'Porotos Alubia x600g', price: 3170, image: '🫘', brand: 'Grano Pampa', category: 'Fideos y Legumbres', rating: 4.9, reviews: 18, composition: '100% Porotos Alubia seleccionados sin gluten.' },
+                    { id: 'p9', name: 'Garbanzos x600g', price: 3139, image: '🧆', brand: 'Grano Pampa', category: 'Fideos y Legumbres', rating: 4.8, reviews: 26, composition: '100% Garbanzos seleccionados.' },
+                    { id: 'p20', name: 'Tapas para Lasagna Sin Gluten', price: 4005, image: '🥟', brand: 'Teramo', category: 'Fideos y Legumbres', rating: 4.9, reviews: 37, composition: 'Almidón de maíz, harina de arroz, huevo.' }
                 ],
-                snacks: [
-                    { id: 's1', name: 'Galletitas Choco y Dulce de Leche x125g', category: 'Snacks', price: 2008, image: '🍪', brand: 'Praat', composition: 'Libre de gluten', certified: true, stock: 18 },
-                    { id: 's2', name: 'Galletas de Arroz Bañadas Choco x99g', category: 'Snacks', price: 2276, image: '🍘', brand: 'Genérico', composition: 'Bañadas en chocolate blanco', certified: true, stock: 14 },
-                    { id: 's3', name: 'Snack Crunchy Corn Sal Marina x35g', category: 'Snacks', price: 853, image: '🌽', brand: 'Lennys', composition: 'Maíz crocante', certified: true, stock: 25 }
+                snacksDulces: [
+                    { id: 'p10', name: 'Galletitas Choco y Dulce de Leche x125g', price: 2008, image: '🍪', brand: 'Praat', category: 'Snacks y Dulces', rating: 5.0, reviews: 64, composition: 'Almidón de maíz, cacao, dulce de leche, azúcar.' },
+                    { id: 'p11', name: 'Galletas de Arroz Bañadas Choco Blanco x99g', price: 2276, image: '🍘', brand: 'Genérico', category: 'Snacks y Dulces', rating: 4.6, reviews: 21, composition: 'Arroz integral, baño de repostería blanco.' },
+                    { id: 'p12', name: 'Pack x6 Snack Crunchy Corn Sal Marina x35g', price: 853, image: '🌽', brand: 'Lennys', category: 'Snacks y Dulces', rating: 4.8, reviews: 39, composition: 'Maíz, aceite de girasol, sal marina.' },
+                    { id: 'p13', name: 'Super Mix Brownies Chocolate x425g', price: 3949, image: '🍫', brand: 'Gula', category: 'Snacks y Dulces', rating: 4.9, reviews: 45, composition: 'Azúcar, cacao en polvo, almidón de maíz.' },
+                    { id: 'p21', name: 'Mermelada de Ciruela Light x330g', price: 5079, image: '🍯', brand: 'La Tranquilina', category: 'Snacks y Dulces', rating: 4.7, reviews: 14, composition: 'Ciruelas, edulcorante, pectina.' }
+                ],
+                almacen: [
+                    { id: 'p14', name: 'Edulcorante Dietético Clásico x500cc', price: 2719, image: '💧', brand: 'Cuarto Creciente', category: 'Almacén y Aderezos', rating: 4.5, reviews: 11, composition: 'Agua, sucralosa, conservantes.' },
+                    { id: 'p15', name: 'Stevia Premium sin Sucralosa x100cc', price: 5841, image: '🌿', brand: 'Trever', category: 'Almacén y Aderezos', rating: 4.9, reviews: 29, composition: 'Extracto de Stevia, agua purificada.' },
+                    { id: 'p16', name: 'Aceite de Salvado de Arroz x900cc', price: 8723, image: '🍾', brand: 'Blue Patna', category: 'Almacén y Aderezos', rating: 5.0, reviews: 33, composition: '100% Aceite de salvado de arroz.' },
+                    { id: 'p19', name: 'Mezcla Vegetales p/Pascualinas x120g', price: 3053, image: '🥗', brand: 'Genérico', category: 'Almacén y Aderezos', rating: 4.6, reviews: 16, composition: 'Espinaca, cebolla, morrón deshidratados.' }
                 ]
             };
 
-            // Metodo seguro para aplanar array en todos los navegadores
             const allProducts = Object.values(products).reduce((acc, val) => acc.concat(val), []);
+            const categoriesList = [
+                { id: 'Todos', name: 'Todos', icon: '🛒' },
+                { id: 'Harinas y Rebozadores', name: 'Harinas', icon: '🌾' },
+                { id: 'Fideos y Legumbres', name: 'Pastas', icon: '🍝' },
+                { id: 'Snacks y Dulces', name: 'Snacks', icon: '🍪' },
+                { id: 'Almacén y Aderezos', name: 'Almacén', icon: '🍾' }
+            ];
 
             const communityRecipes = [
                 {
                     id: 'rec1',
                     title: '🥣 Bowl tibio de quinoa y vegetales',
                     image: '🥗',
-                    time: '25 minutos',
+                    time: '25 min',
                     servings: '2 porciones',
                     ingredients: [
-                        { text: '1 paquete de Fideos de Quinoa', productId: 'f1' },
+                        { text: '1 paquete de Fideos de Quinoa', productId: 'p5' },
                         { text: '1 zucchini' },
                         { text: '1 zanahoria' },
                         { text: '½ morrón rojo' },
                         { text: '½ cebolla morada' },
-                        { text: 'Sal, pimienta y pimentón ahumado' }
+                        { text: 'Sal, pimienta y pimentón ahumado' },
+                        { text: 'Aceite de Salvado de Arroz', productId: 'p16' }
                     ],
                     steps: [
                         'Lavar bien y cocinar la pasta según las indicaciones del paquete.',
                         'Cortar los vegetales en cubos y saltearlos con aceite de oliva.',
                         'Mezclar los vegetales con la pasta caliente.',
                         'Condimentar con limón, sal, pimienta y pimentón.'
-                    ],
-                    tip: 'Podés sumar pollo grillado, queso o garbanzos para aumentar el aporte de proteínas.'
+                    ]
                 },
                 {
                     id: 'rec2',
                     title: '🍪 Cookies extra nutritivas exprés',
                     image: '🍪',
-                    time: '15 minutos',
+                    time: '15 min',
                     servings: '8 porciones',
                     ingredients: [
-                        { text: '1 Premezcla para Cookies x200g', productId: 'h4' },
+                        { text: '1 Premezcla para Cookies x200g', productId: 'p4' },
                         { text: '2 huevos' },
                         { text: '50g de manteca o aceite de coco' },
                         { text: 'Esencia de vainilla' }
@@ -138,8 +183,7 @@
                         'Formar bolitas y aplastarlas sobre una placa para horno.',
                         'Hornear a 180°C durante 10-12 minutos.',
                         'Dejar enfriar antes de consumir.'
-                    ],
-                    tip: 'Ideal para desayuno o vianda escolar, 100% seguras y sin gluten.'
+                    ]
                 }
             ];
 
@@ -152,7 +196,7 @@
                     if (savedUser) {
                         setUserEmail(savedUser);
                         const savedCartData = localStorage.getItem(`lapostaCart_${savedUser}`);
-                        if (savedCartData) setSavedCart(JSON.parse(savedCartData));
+                        if (savedCartData) setCart(JSON.parse(savedCartData));
 
                         const savedLastOrder = localStorage.getItem(`lapostaLastOrder_${savedUser}`);
                         if (savedLastOrder) setLastOrder(JSON.parse(savedLastOrder));
@@ -182,16 +226,11 @@
                     subtotal += unitPrice * qty;
                 });
 
-                // REGLAS DE NEGOCIO ACTUALIZADAS:
-                // Compra Mínima: $90.000 (Se valida en la UI desactivando el botón)
-                // Envío: $9.000 si subtotal < $100.000, si no, Gratis.
                 let shipping = 0;
                 if (subtotal > 0 && subtotal < 100000) {
                     shipping = 9000;
                 }
                 
-                // Si tiene membresía también es gratis siempre según la lógica original, 
-                // pero respetaremos la regla general pedida de 100k para todos.
                 if (hasMembership) shipping = 0;
 
                 const total = subtotal + shipping;
@@ -211,6 +250,14 @@
 
             const isValidEmail = (email) => email.includes('@') && email.includes('.');
 
+            const toggleWishlist = (id) => {
+                if (wishlist.includes(id)) {
+                    setWishlist(wishlist.filter(w => w !== id));
+                } else {
+                    setWishlist([...wishlist, id]);
+                }
+            };
+
             const updateProductQuantity = (product, newQty) => {
                 const existingIndex = cart.findIndex(p => p.id === product.id);
                 if (newQty <= 0) {
@@ -223,7 +270,7 @@
                         setAddedNotification({ ...product, quantity: newQty });
                     }
                 } else {
-                    setCart([...cart, { ...product, quantity: newQty }]);
+                    setCart([...cart, { ...product, quantity: newQty, cartId: Math.random() }]);
                     setAddedNotification({ ...product, quantity: newQty });
                 }
             };
@@ -239,40 +286,45 @@
                 }
             };
 
-            // 1. WELCOME PANTALLA REDISEÑADA
+            // PÁGINA: WELCOME
             const renderWelcomePage = () => (
-                <div className="min-h-screen bg-amber-500 relative flex flex-col justify-between overflow-hidden max-w-md mx-auto">
-                    <div className="absolute top-10 left-[-20px] text-6xl opacity-20 transform -rotate-12">🍞</div>
-                    <div className="absolute top-40 right-[-10px] text-7xl opacity-20 transform rotate-45">🥐</div>
-                    <div className="absolute bottom-80 left-10 text-5xl opacity-20 transform -rotate-45">🌾</div>
+                <div className="min-h-screen bg-gradient-to-br from-amber-600 via-amber-700 to-amber-800 relative flex flex-col justify-between overflow-hidden max-w-md mx-auto shadow-2xl">
+                    <div className="absolute top-12 left-[-20px] text-7xl opacity-15 transform -rotate-12 select-none">🍞</div>
+                    <div className="absolute top-48 right-[-10px] text-8xl opacity-15 transform rotate-45 select-none">🥐</div>
+                    <div className="absolute bottom-96 left-8 text-6xl opacity-15 transform -rotate-45 select-none">🌾</div>
 
-                    <div className="relative z-10 flex-1 flex flex-col items-center justify-center p-6 text-center mt-8">
-                        <div className="text-8xl mb-4 drop-shadow-md">🌾</div>
-                        <h1 className="text-5xl font-extrabold text-white tracking-tight mb-2 drop-shadow-md">La Posta</h1>
-                        <p className="text-xl font-semibold text-amber-50 mb-6 drop-shadow">Tu mes sin gluten resuelto</p>
+                    <div className="relative z-10 flex-1 flex flex-col items-center justify-center p-8 text-center mt-10">
+                        <div className="w-24 h-24 bg-white/10 backdrop-blur-md rounded-3xl flex items-center justify-center text-5xl mb-5 shadow-inner border border-white/20">
+                            🌾
+                        </div>
+                        <h1 className="text-4xl font-extrabold text-white tracking-tight mb-2 drop-shadow-sm">La Posta</h1>
+                        <p className="text-base font-medium text-amber-100 max-w-xs leading-relaxed">Tu mes sin gluten resuelto de forma simple y económica</p>
                     </div>
                     
-                    <div className="relative z-10 bg-white rounded-t-3xl p-6 w-full shadow-[0_-10px_40px_rgba(0,0,0,0.15)] pb-10">
-                        <h2 className="text-lg font-bold text-gray-800 mb-4 text-center">Ingresá para comprar</h2>
+                    <div className="relative z-10 bg-white rounded-t-[32px] p-7 w-full shadow-2xl pb-10 border-t border-amber-100/50">
+                        <h2 className="text-xl font-bold text-gray-900 mb-1 text-center">¡Bienvenido! 👋</h2>
+                        <p className="text-xs text-gray-500 text-center mb-6">Ingresá tus datos para continuar</p>
                         
-                        <div className="space-y-3">
+                        <div className="space-y-4">
                             <div>
+                                <label className="block text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-1.5">Email *</label>
                                 <input
                                     type="email"
-                                    placeholder="Tu Email"
+                                    placeholder="tu@email.com"
                                     value={userEmail}
                                     onChange={(e) => setUserEmail(e.target.value)}
-                                    className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm transition font-medium"
+                                    className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white text-sm transition font-medium"
                                 />
                             </div>
 
                             <div>
+                                <label className="block text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-1.5">Nombre (Opcional)</label>
                                 <input
                                     type="text"
-                                    placeholder="Nombre (Opcional)"
+                                    placeholder="¿Cómo te llamás?"
                                     value={userName}
                                     onChange={(e) => setUserName(e.target.value)}
-                                    className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm transition font-medium"
+                                    className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white text-sm transition font-medium"
                                 />
                             </div>
                             
@@ -287,250 +339,638 @@
                                         localStorage.setItem('lapostaUser', cleanEmail);
                                         localStorage.setItem('lapostaUserName', displayName);
                                         const saved = localStorage.getItem(`lapostaCart_${cleanEmail}`);
-                                        if (saved) setSavedCart(JSON.parse(saved));
+                                        if (saved) setCart(JSON.parse(saved));
                                         const savedOrder = localStorage.getItem(`lapostaLastOrder_${cleanEmail}`);
                                         if (savedOrder) setLastOrder(JSON.parse(savedOrder));
                                         setCurrentPage('membership');
                                     }
                                 }}
                                 disabled={!isValidEmail(userEmail)}
-                                className="w-full bg-amber-600 text-white py-3.5 rounded-xl font-bold disabled:bg-gray-300 disabled:text-gray-500 hover:bg-amber-700 transition text-sm mt-2"
+                                className="w-full bg-amber-700 text-white py-4 rounded-2xl font-bold disabled:bg-gray-200 disabled:text-gray-400 hover:bg-amber-800 transition text-sm mt-2 shadow-lg shadow-amber-700/20 active:scale-[0.98]"
                             >
-                                Iniciar Sesión
+                                Iniciar Sesión →
                             </button>
                         </div>
                     </div>
                 </div>
             );
 
-            // 2. MEMBERSHIP
+            // PÁGINA: MEMBRESÍA (ACTUALIZADA CON PRECIO Y ESTIMADO DE AHORRO)
             const renderMembershipPage = () => (
-                <div className="min-h-screen bg-gradient-to-b from-purple-50 to-purple-100 p-6 max-w-md mx-auto flex flex-col justify-between">
-                    <div className="pt-4 space-y-4">
-                        <div className="text-center mb-2">
-                            <h2 className="text-2xl font-bold text-purple-900">¡Hola, {userName}! 👋</h2>
-                            <p className="text-xs text-purple-700">Usuario: {userEmail}</p>
+                <div className="min-h-screen bg-gradient-to-b from-amber-50/50 via-gray-50 to-amber-50/30 p-6 max-w-md mx-auto flex flex-col justify-between">
+                    <div className="pt-4 space-y-5">
+                        <div className="text-center">
+                            <span className="bg-amber-100 text-amber-900 text-xs font-bold px-3 py-1 rounded-full border border-amber-200/60">Paso 1 de 2</span>
+                            <h2 className="text-2xl font-extrabold text-gray-900 mt-2.5">Elegí tu Plan 🌾</h2>
+                            <p className="text-xs text-gray-500 mt-1">Podés modificarlo o cancelarlo cuando quieras</p>
                         </div>
 
-                        <h2 className="text-md font-bold text-gray-800">Seleccioná tu plan:</h2>
-                        
+                        {/* Comparador de Ahorro */}
+                        <div className="bg-amber-50 border border-amber-200/80 p-3.5 rounded-2xl text-center">
+                            <p className="text-[11px] text-amber-900 font-medium">
+                                💡 En una compra promedio de $100.000, un <strong>Socio VIP ahorra ~$19.000</strong> entre descuentos y envíos gratis.
+                            </p>
+                        </div>
+
                         <div className="space-y-4">
+                            {/* Plan Estándar */}
                             <div 
                                 onClick={() => {
                                     setHasMembership(false);
                                     localStorage.setItem('lapostaMembership', 'false');
                                     setCurrentPage('home');
                                 }}
-                                className="bg-white p-5 rounded-xl border-2 border-gray-300 cursor-pointer hover:border-amber-500 transition shadow-sm space-y-2"
+                                className={`bg-white p-5 rounded-3xl border transition-all cursor-pointer soft-card space-y-3 relative ${!hasMembership ? 'border-amber-600 ring-2 ring-amber-500/20' : 'border-gray-200/80 hover:border-amber-300'}`}
                             >
-                                <p className="font-semibold text-base text-gray-800">Sin Membresía</p>
-                                <p className="text-xs text-gray-600">Ideal para probar la plataforma</p>
-                                <ul className="text-xs space-y-1 text-gray-600 pt-1">
-                                    <li>✓ Acceso a catálogo completo sin gluten</li>
-                                    <li>✓ Envío gratis desde $100.000</li>
-                                    <li>✗ Sin descuentos extra</li>
+                                {!hasMembership && (
+                                    <span className="absolute top-4 right-4 bg-gray-100 text-gray-700 text-[10px] px-2.5 py-0.5 rounded-full font-bold">
+                                        Seleccionado
+                                    </span>
+                                )}
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <p className="font-extrabold text-base text-gray-900">Plan Estándar</p>
+                                        <p className="text-xs text-gray-500 mt-0.5">Para compras ocasionales</p>
+                                    </div>
+                                    <div className="text-right">
+                                        <span className="text-xl font-extrabold text-gray-900">$0</span>
+                                        <span className="text-[10px] text-gray-400 block">sin costo</span>
+                                    </div>
+                                </div>
+                                <ul className="text-xs space-y-2 text-gray-600 pt-2 border-t border-gray-100">
+                                    <li className="flex items-center gap-2"><span className="text-emerald-500 font-bold">✓</span> Catálogo 100% sin gluten verificado</li>
+                                    <li className="flex items-center gap-2"><span className="text-emerald-500 font-bold">✓</span> Envío gratis en pedidos de +$100.000</li>
+                                    <li className="flex items-center gap-2 text-gray-400"><span className="font-bold">✕</span> Precios estándar de lista</li>
                                 </ul>
-                                <button className="w-full bg-gray-200 text-gray-800 py-2 rounded-lg font-semibold text-xs mt-2">
-                                    Empezar sin membresía
+                                <button className="w-full bg-gray-100 text-gray-800 py-3 rounded-2xl font-bold text-xs hover:bg-gray-200 transition">
+                                    Continuar con Plan Estándar
                                 </button>
                             </div>
 
+                            {/* Plan Socio VIP */}
                             <div 
                                 onClick={() => {
                                     setHasMembership(true);
                                     localStorage.setItem('lapostaMembership', 'true');
                                     setCurrentPage('home');
                                 }}
-                                className="bg-gradient-to-br from-amber-100 to-amber-50 p-5 rounded-xl border-2 border-amber-500 cursor-pointer hover:shadow-md transition relative ring-2 ring-amber-300 space-y-2"
+                                className={`bg-gradient-to-br from-amber-600 via-amber-700 to-amber-800 text-white p-6 rounded-3xl cursor-pointer shadow-xl shadow-amber-700/20 transition-all relative overflow-hidden ${hasMembership ? 'ring-4 ring-amber-400/50' : ''}`}
                             >
-                                <span className="absolute -top-3 right-4 bg-amber-600 text-white text-[10px] px-2.5 py-0.5 rounded-full font-bold">MEJOR OPCIÓN</span>
-                                <p className="font-bold text-base text-amber-900">Membresía Mensual ✨</p>
-                                <p className="text-xl font-extrabold text-amber-800">10% OFF en todo</p>
-                                <ul className="text-xs space-y-1 text-amber-900 pt-1">
-                                    <li>✓ <strong>10% OFF</strong> en todo el catálogo</li>
-                                    <li>✓ <strong>+5% EXTRA</strong> si comprás más de 3 unidades</li>
-                                    <li>✓ <strong>Envío GRATIS</strong> en todas tus compras</li>
+                                <div className="flex justify-between items-start mb-2">
+                                    <span className="bg-white/20 backdrop-blur-md text-white text-[10px] px-3 py-1 rounded-full font-extrabold uppercase tracking-wider border border-white/20">
+                                        MÁS POPULAR ⭐
+                                    </span>
+                                    <div className="text-right">
+                                        <div className="text-2xl font-extrabold text-white">$3.990</div>
+                                        <span className="text-[10px] text-amber-200 font-medium">/ mes • cancelás cuando quieras</span>
+                                    </div>
+                                </div>
+                                
+                                <p className="font-bold text-xs text-amber-200 uppercase tracking-wider mt-2">Socio VIP La Posta</p>
+                                <h3 className="text-2xl font-extrabold text-white">10% OFF + Envío Gratis</h3>
+                                
+                                <ul className="text-xs space-y-2.5 text-amber-50 pt-4 border-t border-white/20 my-4">
+                                    <li className="flex items-center gap-2 font-medium">✨ <strong>10% OFF fijo</strong> en todos los productos sin tope</li>
+                                    <li className="flex items-center gap-2 font-medium">🚚 <strong>Envío GRATIS</strong> sin mínimo de compra siempre</li>
+                                    <li className="flex items-center gap-2 font-medium">⚡ <strong>+5% EXTRA</strong> llevando más de 3 unidades iguales</li>
+                                    <li className="flex items-center gap-2 font-medium">🎁 <strong>Regalo sorpresa</strong> en tu primera orden del mes</li>
                                 </ul>
-                                <button className="w-full bg-amber-700 text-white py-2 rounded-lg font-bold text-xs hover:bg-amber-800 transition mt-2 shadow">
-                                    Activar membresía
+
+                                <button className="w-full bg-white text-amber-900 py-3.5 rounded-2xl font-extrabold text-xs shadow-md hover:bg-amber-50 transition active:scale-[0.99]">
+                                    {hasMembership ? '✓ Membresía Activa (Ir al catálogo)' : 'Activar Membresía VIP ($3.990/mes) ✨'}
                                 </button>
                             </div>
                         </div>
                     </div>
-
-                    <button 
-                        onClick={handleLogout}
-                        className="text-xs text-gray-500 text-center underline py-4 hover:text-red-600"
-                    >
-                        🚪 Salir / Cambiar usuario
-                    </button>
                 </div>
             );
 
-            // 3. HOME
-            const renderHomePage = () => (
-                <div className="min-h-screen bg-[#FDFDFD] pb-20">
-                    <div className="bg-amber-700 text-white p-4 sticky top-0 z-10 shadow">
-                        <div className="flex justify-between items-center mb-1 max-w-md mx-auto">
-                            <h1 className="text-xl font-bold flex items-center gap-2">🌾 La Posta</h1>
-                            <div className="flex items-center gap-3">
-                                <button onClick={() => setCurrentPage('cart')} className="text-2xl relative">
+            // PÁGINA: PROFILE (PERFIL DE USUARIO)
+            const renderProfilePage = () => (
+                <div className="min-h-screen bg-slate-50 pb-28">
+                    <div className="bg-white border-b border-slate-100 p-4 sticky top-0 z-10 backdrop-blur-md bg-white/90">
+                        <div className="flex justify-between items-center max-w-md mx-auto">
+                            <button onClick={() => setCurrentPage('home')} className="text-xs font-bold text-amber-800 bg-amber-50 px-3 py-1.5 rounded-full">← Volver</button>
+                            <h1 className="text-base font-bold text-gray-900">Mi Perfil 👤</h1>
+                            <button onClick={handleLogout} title="Cerrar Sesión" className="text-base p-1.5 bg-gray-100 rounded-full">🚪</button>
+                        </div>
+                    </div>
+
+                    <div className="p-4 space-y-4 max-w-md mx-auto mt-2">
+                        {/* Tarjeta de Identificación */}
+                        <div className="bg-white p-6 rounded-3xl soft-card border border-slate-100 text-center relative overflow-hidden">
+                            <div className="absolute top-0 left-0 w-full h-16 bg-gradient-to-r from-amber-100 via-orange-100 to-amber-50"></div>
+                            <div className="relative z-10">
+                                <div className="w-20 h-20 bg-amber-700 text-white rounded-full flex items-center justify-center text-3xl font-extrabold mx-auto mb-3 shadow-lg border-4 border-white">
+                                    {userName ? userName.charAt(0).toUpperCase() : '👤'}
+                                </div>
+                                <h2 className="text-xl font-extrabold text-gray-900">{userName || 'Cliente La Posta'}</h2>
+                                <p className="text-xs text-gray-500 font-medium mt-0.5">{userEmail}</p>
+                                
+                                <div className="mt-4 inline-block bg-amber-50 border border-amber-200/80 text-amber-900 px-4 py-1.5 rounded-full text-xs font-bold shadow-xs">
+                                    {hasMembership ? '⭐ Socio VIP Activo (10% OFF + Envío Gratis)' : '👤 Plan Estándar'}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Cambiar plan */}
+                        <div className="bg-white rounded-2xl soft-card border border-slate-100 overflow-hidden">
+                            <button onClick={() => setCurrentPage('membership')} className="w-full p-4 flex justify-between items-center text-left hover:bg-slate-50 transition">
+                                <span className="text-xs font-bold text-gray-800 flex items-center gap-2.5">
+                                    <span className="p-2 bg-amber-100 rounded-xl text-amber-800">💳</span>
+                                    <span>{hasMembership ? 'Gestionar Membresía VIP ($3.990/mes)' : 'Sumarme a Socio VIP (10% OFF)'}</span>
+                                </span>
+                                <span className="text-gray-400 font-bold">→</span>
+                            </button>
+                        </div>
+
+                        {/* Productos Recurrentes */}
+                        <div className="bg-white p-5 rounded-3xl soft-card border border-slate-100 space-y-3">
+                            <h3 className="font-extrabold text-gray-900 text-sm border-b border-gray-100 pb-2">⭐ Productos Habituales</h3>
+                            <p className="text-[11px] text-gray-500">Tus favoritos para reponer rápidamente:</p>
+                            
+                            <div className="space-y-2">
+                                {products.harinasRebozadores.slice(0, 2).concat(products.snacksDulces.slice(0, 1)).map(prod => (
+                                    <div key={prod.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-100 text-xs">
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-2xl p-1.5 bg-white rounded-xl shadow-xs">{prod.image}</span>
+                                            <div>
+                                                <p className="text-[10px] font-bold text-amber-800 uppercase tracking-wider">{prod.brand}</p>
+                                                <p className="font-semibold text-gray-800 line-clamp-1">{prod.name}</p>
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={() => updateProductQuantity(prod, 1)}
+                                            className="bg-amber-700 text-white text-xs px-3 py-1.5 rounded-xl font-bold hover:bg-amber-800 transition shadow-xs"
+                                        >
+                                            + Pedir
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Último Pedido Realizado */}
+                        <div className="bg-white p-5 rounded-3xl soft-card border border-slate-100 text-xs space-y-3">
+                            <h3 className="font-extrabold text-gray-900 text-sm border-b border-gray-100 pb-2">📦 Última Compra</h3>
+                            {lastOrder ? (
+                                <div className="bg-amber-50/60 p-4 rounded-2xl border border-amber-200/70 space-y-2.5">
+                                    <div className="flex justify-between text-amber-950 font-bold">
+                                        <span>Orden: #{lastOrder.orderNumber || 'Reciente'}</span>
+                                        <span className="text-amber-800 font-medium">{lastOrder.date || 'Reciente'}</span>
+                                    </div>
+                                    <ul className="space-y-1.5 text-gray-700 border-t border-b border-amber-200/50 py-2">
+                                        {lastOrder.items ? lastOrder.items.map((it, idx) => (
+                                            <li key={idx} className="flex justify-between">
+                                                <span>• {it.name} (x{it.quantity})</span>
+                                                <span className="font-semibold">${calculatePrice(it, it.quantity) * it.quantity}</span>
+                                            </li>
+                                        )) : null}
+                                    </ul>
+                                    <div className="flex justify-between font-extrabold text-amber-950 text-sm pt-1">
+                                        <span>Total:</span>
+                                        <span className="text-amber-800">${lastOrder.total}</span>
+                                    </div>
+                                    <button
+                                        onClick={() => {
+                                            setCart(lastOrder.items || []);
+                                            setCurrentPage('cart');
+                                        }}
+                                        className="w-full bg-amber-700 text-white py-2.5 rounded-xl font-bold text-xs hover:bg-amber-800 transition mt-2 shadow-xs"
+                                    >
+                                        🔄 Volver a cargar al carrito
+                                    </button>
+                                </div>
+                            ) : (
+                                <p className="text-gray-400 italic text-center py-2">No tenés compras registradas aún.</p>
+                            )}
+                        </div>
+
+                        <button
+                            onClick={handleLogout}
+                            className="w-full bg-red-50 text-red-600 border border-red-100 py-3.5 rounded-2xl font-bold text-xs hover:bg-red-100 transition flex items-center justify-center gap-2 mt-4"
+                        >
+                            🚪 Cerrar Sesión
+                        </button>
+                    </div>
+
+                    <BottomNav active="profile" />
+                </div>
+            );
+
+            // PÁGINA: DETALLE DE PRODUCTO
+            const renderProductPage = (productId) => {
+                const product = allProducts.find(p => p.id === productId);
+                if (!product) return null;
+
+                const inCart = cart.find(p => p.id === productId);
+                const qty = inCart ? (inCart.quantity || 1) : 1;
+                const pricePerUnit = calculatePrice(product, qty);
+                const isWished = wishlist.includes(product.id);
+
+                return (
+                    <div className="min-h-screen bg-slate-50 pb-28 max-w-md mx-auto">
+                        <div className="bg-white border-b border-slate-100 p-4 sticky top-0 z-10 backdrop-blur-md bg-white/90 flex justify-between items-center">
+                            <button onClick={() => setCurrentPage('home')} className="text-amber-800 bg-amber-50 px-3 py-1.5 rounded-full text-xs font-bold">← Volver</button>
+                            <h1 className="text-xs font-bold text-gray-500 truncate max-w-[200px]">{product.brand}</h1>
+                            <button onClick={() => toggleWishlist(product.id)} className="text-lg">
+                                {isWished ? '❤️' : '🤍'}
+                            </button>
+                        </div>
+
+                        <div className="p-4 space-y-4">
+                            <div className="bg-white p-6 rounded-3xl border border-slate-100 text-center soft-card relative overflow-hidden">
+                                <div className="w-40 h-40 bg-amber-50/80 rounded-full flex items-center justify-center text-7xl mx-auto mb-4 border border-amber-100/50 shadow-inner">
+                                    {product.image}
+                                </div>
+                                <div className="flex items-center justify-center gap-2 mb-1">
+                                    <span className="bg-amber-100 text-amber-900 text-[10px] px-3 py-1 rounded-full font-extrabold uppercase tracking-wider">{product.brand}</span>
+                                    <span className="text-xs text-amber-700 font-bold flex items-center gap-1">⭐ {product.rating || 4.9} ({product.reviews || 20})</span>
+                                </div>
+                                <h1 className="text-lg font-extrabold text-gray-900 mt-2 leading-tight">{product.name}</h1>
+                                
+                                <div className="mt-3">
+                                    <p className="text-3xl font-extrabold text-amber-700">${pricePerUnit}</p>
+                                    {hasMembership && (
+                                        <span className="inline-block bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2.5 py-0.5 rounded-full mt-1">
+                                            ✨ Precio VIP con 10% OFF
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="bg-emerald-50/80 border border-emerald-200/80 p-5 rounded-3xl space-y-2">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-emerald-700 text-lg">🛡️</span>
+                                    <p className="font-bold text-sm text-emerald-950">Garantía Sin Gluten</p>
+                                </div>
+                                <p className="text-xs text-emerald-800 leading-relaxed">Producto 100% libre de gluten verificado y certificado con sello oficial SENASA.</p>
+                                
+                                <div className="bg-white p-4 rounded-2xl border border-emerald-100 mt-3">
+                                    <p className="text-[11px] font-bold text-gray-800 mb-1">Composición e Ingredientes:</p>
+                                    <p className="text-xs text-gray-600 italic leading-relaxed">{product.composition || 'Ingredientes certificados libres de gluten.'}</p>
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={() => {
+                                    if (!inCart) updateProductQuantity(product, 1);
+                                    else updateProductQuantity(product, qty + 1);
+                                }}
+                                className="w-full bg-amber-700 hover:bg-amber-800 text-white py-4 rounded-2xl font-bold text-sm transition shadow-lg shadow-amber-700/20 flex items-center justify-center gap-2 active:scale-[0.98]"
+                            >
+                                🛒 Agregar al carrito (${pricePerUnit})
+                            </button>
+                        </div>
+
+                        <BottomNav active="home" />
+                    </div>
+                );
+            };
+
+            // PÁGINA: CATALOGO (HOME) - BANNERS DINÁMICOS Y BUSCADOR INTERACTIVO
+            const renderHomePage = () => {
+                const banners = [
+                    {
+                        title: hasMembership ? "¡Tu Beneficio VIP está Activo! ⭐" : "Tu mes sin gluten al mejor precio 🌾",
+                        subtitle: hasMembership ? "Tenés 10% OFF aplicado + Envío Gratis sin mínimo" : "Sumate a Socio VIP por $3.990/mes y obtené 10% OFF extra",
+                        badge: hasMembership ? "SOCIO VIP ACTIVADO" : "100% SIN GLUTEN",
+                        actionText: hasMembership ? "Aprovechar Descuentos" : "Probar Membresía VIP →",
+                        onClick: () => setCurrentPage(hasMembership ? 'home' : 'membership')
+                    },
+                    {
+                        title: "Combos de Reposición Mensual 📦",
+                        subtitle: "Premezclas, pastas y galletitas seleccionadas con envío a todo el país",
+                        badge: "REPOSICIÓN SIMPLE",
+                        actionText: "Ver Harinas",
+                        onClick: () => setActiveCategory('Harinas y Rebozadores')
+                    }
+                ];
+
+                const currentBanner = banners[bannerSlide];
+
+                const filteredProducts = allProducts.filter(p => {
+                    const matchesCategory = activeCategory === 'Todos' || p.category === activeCategory;
+                    const matchesSearch = searchQuery.trim() === '' || 
+                        p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                        p.brand.toLowerCase().includes(searchQuery.toLowerCase());
+                    return matchesCategory && matchesSearch;
+                });
+
+                return (
+                    <div className="min-h-screen bg-slate-50 pb-28">
+                        {/* Top Header */}
+                        <div className="bg-white border-b border-slate-100 pt-4 pb-3 px-5 sticky top-0 z-10 backdrop-blur-md bg-white/95">
+                            <div className="flex justify-between items-center max-w-md mx-auto">
+                                <div className="flex items-center gap-2.5">
+                                    <div className="w-10 h-10 bg-amber-700 text-white rounded-2xl flex items-center justify-center text-xl shadow-md shadow-amber-700/20">
+                                        🌾
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-extrabold text-amber-800 uppercase tracking-wider">La Posta</p>
+                                        <h1 className="text-sm font-extrabold text-gray-900 leading-none">Hola, {userName || 'Bienvenido'} 👋</h1>
+                                    </div>
+                                </div>
+
+                                <button onClick={() => setCurrentPage('cart')} className="text-xl relative bg-amber-50 p-2.5 rounded-2xl border border-amber-100/80 active:scale-95 transition">
                                     🛒
-                                    {cart.length > 0 && (
-                                        <span className="absolute -top-1 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                                    {cartSummary.totalItems > 0 && (
+                                        <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] rounded-full w-5 h-5 flex items-center justify-center font-extrabold shadow-sm">
                                             {cartSummary.totalItems}
                                         </span>
                                     )}
                                 </button>
-                                <button onClick={handleLogout} title="Cerrar sesión" className="text-xl bg-amber-800/60 hover:bg-amber-800 p-1.5 rounded-lg transition">🚪</button>
-                            </div>
-                        </div>
-                        <div className="flex justify-between text-[11px] text-amber-100 max-w-md mx-auto">
-                            <span>Usuario: {userName || userEmail}</span>
-                            <span className="font-semibold">{hasMembership ? '⭐ Socio (10% OFF)' : '👤 Estándar'}</span>
-                        </div>
-                    </div>
-
-                    <div className="bg-white border-b border-amber-100 p-3 shadow-sm">
-                        <div className="flex items-center gap-2 max-w-md mx-auto text-xs text-gray-700 font-medium">
-                            <span className="text-green-600 text-base font-bold">✓</span>
-                            <span>Todos los productos están certificados sin gluten (SENASA)</span>
-                        </div>
-                    </div>
-
-                    <div className="p-4 space-y-5 max-w-md mx-auto">
-                        
-                        {/* Banners Cherrypick Style - Adaptados a La Posta */}
-                        <div className="space-y-2 mb-6">
-                            <div className="bg-green-50 rounded-xl p-3.5 border border-green-200">
-                                <h3 className="font-bold text-green-900 text-sm">🚚 Envío gratis desde $100.000</h3>
-                                <p className="text-xs text-green-800 mt-0.5">Si tu compra es menor, el envío cuesta aprox. $9.000.</p>
-                            </div>
-                            <div className="bg-amber-50 rounded-xl p-3.5 border border-amber-200">
-                                <h3 className="font-bold text-amber-900 text-sm">✨ Compra mínima mayorista</h3>
-                                <p className="text-xs text-amber-800 mt-0.5">El monto mínimo para realizar un pedido es de $90.000.</p>
                             </div>
                         </div>
 
-                        {Object.entries({
-                            'Harinas y Premezclas': products.harinas,
-                            'Fideos y Legumbres': products.fideosLegumbres,
-                            'Galletitas y Snacks': products.snacks
-                        }).map(([category, items]) => (
-                            <div key={category} className="pt-2">
-                                <h3 className="text-lg font-extrabold text-gray-800 mb-3">{category}</h3>
-                                <div className="space-y-3">
-                                    {items.map(product => {
-                                        const inCart = cart.find(p => p.id === product.id);
-                                        const qty = inCart ? (inCart.quantity || 1) : 0;
-                                        const pricePerUnit = calculatePrice(product, qty || 1);
-                                        
+                        <div className="p-4 max-w-md mx-auto space-y-5">
+                            
+                            {/* Hero Banner Dinámico (Socio VIP & Ofertas) */}
+                            <div className="bg-gradient-to-br from-amber-600 via-amber-700 to-amber-800 text-white p-5 rounded-3xl shadow-xl shadow-amber-700/20 relative overflow-hidden transition-all">
+                                <div className="absolute -right-4 -bottom-4 text-9xl opacity-20 select-none">🌾</div>
+                                <div className="flex justify-between items-start">
+                                    <span className="bg-white/20 backdrop-blur-md text-white text-[9px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider border border-white/20">
+                                        {currentBanner.badge}
+                                    </span>
+                                    <span className="text-xs text-amber-100 font-bold">{hasMembership ? '10% OFF ACTIVO' : 'HASTA 15% OFF'}</span>
+                                </div>
+
+                                <h2 className="text-2xl font-extrabold mt-2.5 leading-tight">{currentBanner.title}</h2>
+                                <p className="text-[11px] text-amber-100 mt-1 font-medium">{currentBanner.subtitle}</p>
+
+                                {/* Search Bar Interactivo */}
+                                <div className="bg-white rounded-2xl p-1.5 mt-4 shadow-md flex items-center text-gray-700">
+                                    <span className="text-gray-400 ml-2.5 mr-2 text-xs">🔍</span>
+                                    <input 
+                                        type="text" 
+                                        placeholder="Buscar premezclas, fideos, galletas..." 
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        className="bg-transparent border-none outline-none w-full text-xs font-medium text-gray-800 placeholder-gray-400" 
+                                    />
+                                    {searchQuery ? (
+                                        <button onClick={() => setSearchQuery('')} className="bg-gray-100 text-gray-500 p-1.5 rounded-xl text-xs font-bold mr-1">✕</button>
+                                    ) : (
+                                        <button className="bg-amber-50 text-amber-800 p-2 rounded-xl text-xs font-bold border border-amber-100">
+                                            🎛️
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* Dots y Botón de Acción */}
+                                <div className="flex justify-between items-center mt-3 pt-1">
+                                    <div className="flex gap-1.5">
+                                        {banners.map((_, idx) => (
+                                            <button 
+                                                key={idx}
+                                                onClick={() => setBannerSlide(idx)}
+                                                className={`h-1.5 rounded-full transition-all ${bannerSlide === idx ? 'w-5 bg-white' : 'w-1.5 bg-white/40'}`}
+                                            />
+                                        ))}
+                                    </div>
+
+                                    <button 
+                                        onClick={currentBanner.onClick}
+                                        className="text-[11px] font-extrabold bg-white/10 hover:bg-white/20 border border-white/30 text-white px-3 py-1 rounded-xl transition"
+                                    >
+                                        {currentBanner.actionText}
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Value Props / Franja de Confianza */}
+                            <div className="grid grid-cols-3 gap-2 text-center text-[10px]">
+                                <div className="bg-white p-2.5 rounded-2xl border border-slate-100 soft-card">
+                                    <span className="text-base block mb-0.5">🛡️</span>
+                                    <p className="font-extrabold text-gray-800 leading-tight">100% Sin Gluten</p>
+                                    <p className="text-[9px] text-gray-400">Certificado SENASA</p>
+                                </div>
+                                <div className="bg-white p-2.5 rounded-2xl border border-slate-100 soft-card">
+                                    <span className="text-base block mb-0.5">🚚</span>
+                                    <p className="font-extrabold text-gray-800 leading-tight">{hasMembership ? 'Envío GRATIS' : 'Envío Gratis'}</p>
+                                    <p className="text-[9px] text-gray-400">{hasMembership ? 'Sin Mínimo (VIP)' : 'Desde $100k'}</p>
+                                </div>
+                                <div className="bg-white p-2.5 rounded-2xl border border-slate-100 soft-card">
+                                    <span className="text-base block mb-0.5">⭐</span>
+                                    <p className="font-extrabold text-gray-800 leading-tight">{hasMembership ? 'Descuento VIP' : 'Socio VIP'}</p>
+                                    <p className="text-[9px] text-gray-400">{hasMembership ? '10% OFF Aplicado' : 'Ahorrá 10% extra'}</p>
+                                </div>
+                            </div>
+
+                            {/* Categorías (Iconos Circulares Avanzados) */}
+                            <div>
+                                <div className="flex justify-between items-center mb-2.5">
+                                    <h3 className="font-extrabold text-sm text-gray-900">Categorías</h3>
+                                    {activeCategory !== 'Todos' && (
+                                        <button onClick={() => setActiveCategory('Todos')} className="text-[11px] font-bold text-amber-800">Ver todas</button>
+                                    )}
+                                </div>
+                                <div className="flex overflow-x-auto gap-3 hide-scrollbar pb-1">
+                                    {categoriesList.map(cat => {
+                                        const isActive = activeCategory === cat.id;
                                         return (
-                                            <div key={product.id} className="bg-white p-3.5 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition">
-                                                <div className="flex justify-between items-start gap-2">
-                                                    <div className="flex items-start gap-3 flex-1">
-                                                        <span className="text-3xl bg-gray-50 p-1.5 rounded-lg border border-gray-100">{product.image}</span>
-                                                        <div>
-                                                            <span className="text-[10px] bg-amber-100 text-amber-900 px-2 py-0.5 rounded font-bold uppercase tracking-wider">{product.brand}</span>
-                                                            <p className="font-bold text-sm text-gray-800 mt-1 leading-tight">{product.name}</p>
-                                                            <p className="text-sm font-extrabold text-amber-700 mt-1">${pricePerUnit}</p>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="flex flex-col items-end gap-2 justify-center h-full">
-                                                        {qty === 0 ? (
-                                                            <button onClick={() => updateProductQuantity(product, 1)} className="bg-amber-700 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-amber-800 transition shadow-sm mt-3">+ Agregar</button>
-                                                        ) : (
-                                                            <div className="flex items-center gap-2 bg-amber-50 p-1 rounded-xl border border-amber-200 mt-3">
-                                                                <button onClick={() => updateProductQuantity(product, qty - 1)} className="w-7 h-7 bg-white text-amber-800 rounded-lg font-bold shadow-sm flex items-center justify-center text-sm">−</button>
-                                                                <span className="text-sm font-bold text-amber-900 min-w-[20px] text-center">{qty}</span>
-                                                                <button onClick={() => updateProductQuantity(product, qty + 1)} className="w-7 h-7 bg-amber-700 text-white rounded-lg font-bold shadow-sm flex items-center justify-center text-sm">+</button>
-                                                            </div>
-                                                        )}
-                                                    </div>
+                                            <button 
+                                                key={cat.id}
+                                                onClick={() => setActiveCategory(cat.id)}
+                                                className="flex flex-col items-center flex-shrink-0 group"
+                                            >
+                                                <div className={`w-14 h-14 rounded-full flex items-center justify-center text-2xl mb-1 transition-all ${
+                                                    isActive 
+                                                    ? 'bg-amber-700 text-white shadow-md shadow-amber-700/20 scale-105' 
+                                                    : 'bg-white border border-slate-200 text-gray-700 group-hover:border-amber-300'
+                                                }`}>
+                                                    {cat.icon}
                                                 </div>
-                                            </div>
+                                                <span className={`text-[11px] font-bold ${isActive ? 'text-amber-900' : 'text-gray-500'}`}>
+                                                    {cat.name}
+                                                </span>
+                                            </button>
                                         );
                                     })}
                                 </div>
                             </div>
-                        ))}
-                    </div>
-                    <BottomNav active="home" />
-                </div>
-            );
 
-            // 5. CART
+                            {/* Grid de Productos (2 Columnas) */}
+                            <div>
+                                <div className="flex justify-between items-center mb-3">
+                                    <h3 className="font-extrabold text-sm text-gray-900">
+                                        {searchQuery ? `Resultados para "${searchQuery}"` : 'Catálogo Destacado'}
+                                    </h3>
+                                    <span className="text-[10px] text-gray-400 font-medium">{filteredProducts.length} productos</span>
+                                </div>
+
+                                {filteredProducts.length === 0 ? (
+                                    <div className="bg-white p-8 rounded-3xl text-center text-gray-500 soft-card border border-slate-100">
+                                        <p className="text-3xl mb-2">🔍</p>
+                                        <p className="text-xs font-bold text-gray-800">No encontramos productos</p>
+                                        <p className="text-[11px] text-gray-400 mt-1">Proba cambiando los términos de búsqueda o de categoría.</p>
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {filteredProducts.map(product => {
+                                            const inCart = cart.find(p => p.id === product.id);
+                                            const qty = inCart ? (inCart.quantity || 1) : 0;
+                                            const pricePerUnit = calculatePrice(product, qty || 1);
+                                            const isWished = wishlist.includes(product.id);
+                                            
+                                            return (
+                                                <div key={product.id} className="bg-white p-3 rounded-3xl border border-slate-100 soft-card soft-card-hover flex flex-col justify-between transition-all relative">
+                                                    {/* Wishlist Heart Button */}
+                                                    <button 
+                                                        onClick={(e) => { e.stopPropagation(); toggleWishlist(product.id); }}
+                                                        className="absolute top-3 right-3 z-10 w-7 h-7 bg-white/80 backdrop-blur-md rounded-full flex items-center justify-center text-xs shadow-xs border border-slate-100"
+                                                    >
+                                                        {isWished ? '❤️' : '🤍'}
+                                                    </button>
+
+                                                    {/* Clickeable para Detalle */}
+                                                    <div className="cursor-pointer" onClick={() => setCurrentPage(`product-${product.id}`)}>
+                                                        {/* Soft circle container para imagen */}
+                                                        <div className="bg-amber-50/70 rounded-2xl aspect-square flex items-center justify-center text-4xl mb-2.5 relative border border-amber-100/40 overflow-hidden">
+                                                            <div className="w-20 h-20 bg-amber-100/40 rounded-full absolute"></div>
+                                                            <span className="relative z-10 transform hover:scale-110 transition">{product.image}</span>
+                                                        </div>
+                                                        
+                                                        <div className="flex items-center justify-between">
+                                                            <p className="text-[9px] font-extrabold text-amber-800 uppercase tracking-wider">{product.brand}</p>
+                                                            <span className="text-[10px] font-bold text-amber-700 flex items-center gap-0.5">⭐ {product.rating || 4.8}</span>
+                                                        </div>
+                                                        <h4 className="font-bold text-xs text-gray-900 mt-0.5 leading-snug line-clamp-2 h-8">{product.name}</h4>
+                                                    </div>
+                                                    
+                                                    {/* Precio y Controles de Carrito */}
+                                                    <div className="flex justify-between items-center mt-3 pt-2 border-t border-slate-50">
+                                                        <div>
+                                                            <p className="text-[9px] text-gray-400 font-medium">
+                                                                {hasMembership ? <span className="text-emerald-600 font-bold">Precio VIP</span> : 'Precio unit.'}
+                                                            </p>
+                                                            <p className="text-sm font-extrabold text-amber-700">${pricePerUnit}</p>
+                                                        </div>
+                                                        
+                                                        {qty === 0 ? (
+                                                            <button 
+                                                                onClick={() => updateProductQuantity(product, 1)} 
+                                                                className="bg-amber-700 text-white w-8 h-8 rounded-2xl flex items-center justify-center text-xs font-bold shadow-md shadow-amber-700/20 hover:bg-amber-800 transition active:scale-95"
+                                                            >
+                                                                +
+                                                            </button>
+                                                        ) : (
+                                                            <div className="flex items-center gap-1 bg-amber-50 p-1 rounded-2xl border border-amber-200/80">
+                                                                <button onClick={() => updateProductQuantity(product, qty - 1)} className="w-5 h-5 bg-white text-amber-900 rounded-xl font-bold shadow-xs flex items-center justify-center text-xs">
+                                                                    −
+                                                                </button>
+                                                                <span className="text-xs font-extrabold text-amber-950 w-4 text-center">{qty}</span>
+                                                                <button onClick={() => updateProductQuantity(product, qty + 1)} className="w-5 h-5 bg-amber-700 text-white rounded-xl font-bold shadow-xs flex items-center justify-center text-xs">
+                                                                    +
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+
+                        </div>
+                        <BottomNav active="home" />
+                    </div>
+                );
+            };
+
+            // PÁGINA: MI CARRITO
             const renderCartPage = () => {
                 const { subtotal, total, shipping } = calculateCartTotal();
                 const minMet = subtotal >= MIN_ORDER;
 
                 return (
-                    <div className="min-h-screen bg-gray-50 pb-24">
-                        <div className="bg-amber-700 text-white p-4 sticky top-0 z-10 shadow">
+                    <div className="min-h-screen bg-slate-50 pb-28">
+                        <div className="bg-white border-b border-slate-100 p-4 sticky top-0 z-10 backdrop-blur-md bg-white/90">
                             <div className="flex justify-between items-center max-w-md mx-auto">
-                                <button onClick={() => setCurrentPage('home')} className="text-amber-100 text-xs font-bold">← Volver</button>
-                                <h1 className="text-lg font-bold">Mi Carrito 🛒</h1>
-                                <button onClick={handleLogout} className="text-lg">🚪</button>
+                                <button onClick={() => setCurrentPage('home')} className="text-xs font-bold text-amber-800 bg-amber-50 px-3 py-1.5 rounded-full">← Volver</button>
+                                <h1 className="text-base font-bold text-gray-900">Mi Carrito 🛒</h1>
+                                <div></div>
                             </div>
                         </div>
 
                         <div className="p-4 space-y-4 max-w-md mx-auto">
                             {cart.length === 0 ? (
-                                <div className="p-10 text-center text-gray-500 space-y-3 bg-white rounded-2xl border border-gray-200 shadow-sm mt-4">
-                                    <p className="text-5xl">🛒</p>
-                                    <p className="text-sm font-semibold">Tu carrito está vacío</p>
-                                    <button onClick={() => setCurrentPage('home')} className="mt-2 bg-amber-700 text-white text-xs px-5 py-2.5 rounded-xl font-bold shadow-sm">Explorar catálogo</button>
+                                <div className="p-10 text-center space-y-3 bg-white rounded-3xl border border-slate-100 soft-card mt-4">
+                                    <div className="w-20 h-20 bg-amber-50 text-amber-800 rounded-full flex items-center justify-center text-4xl mx-auto mb-2">🛒</div>
+                                    <h3 className="text-base font-bold text-gray-900">Tu carrito está vacío</h3>
+                                    <p className="text-xs text-gray-500 max-w-xs mx-auto">Explorá nuestro catálogo con más de 20 productos sin gluten al mejor precio.</p>
+                                    <button onClick={() => setCurrentPage('home')} className="mt-2 bg-amber-700 text-white text-xs px-6 py-3 rounded-2xl font-bold shadow-md shadow-amber-700/20">
+                                        Explorar catálogo
+                                    </button>
                                 </div>
                             ) : (
                                 <>
-                                    <div className="space-y-3">
+                                    <div className="space-y-2.5">
                                         {cart.map((item, idx) => {
                                             const qty = item.quantity || 1;
                                             const pricePerUnit = calculatePrice(item, qty);
-                                            const itemTotal = pricePerUnit * qty;
                                             return (
-                                                <div key={idx} className="bg-white p-3.5 rounded-xl border border-gray-200 shadow-sm flex justify-between items-center text-xs">
-                                                    <div>
-                                                        <p className="font-bold text-gray-800 text-sm">{item.image} {item.name}</p>
-                                                        <p className="text-gray-500 mt-0.5">${pricePerUnit} x {qty} = <strong className="text-amber-800">${itemTotal}</strong></p>
+                                                <div key={idx} className="bg-white p-3.5 rounded-3xl border border-slate-100 soft-card flex items-center gap-3">
+                                                    <div className="bg-amber-50 w-16 h-16 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0 cursor-pointer border border-amber-100/50" onClick={() => setCurrentPage(`product-${item.id}`)}>
+                                                        {item.image}
                                                     </div>
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="flex items-center gap-1.5 bg-gray-50 p-1 rounded-lg border border-gray-200">
-                                                            <button onClick={() => updateProductQuantity(item, qty - 1)} className="w-6 h-6 bg-white font-bold rounded shadow-sm text-gray-600">−</button>
-                                                            <span className="px-1.5 font-bold text-gray-800">{qty}</span>
-                                                            <button onClick={() => updateProductQuantity(item, qty + 1)} className="w-6 h-6 bg-white font-bold rounded shadow-sm text-gray-600">+</button>
+                                                    <div className="flex-1">
+                                                        <div className="flex justify-between items-start">
+                                                            <div className="cursor-pointer" onClick={() => setCurrentPage(`product-${item.id}`)}>
+                                                                <span className="text-[9px] font-extrabold text-amber-800 uppercase">{item.brand}</span>
+                                                                <h4 className="text-xs font-bold text-gray-900 leading-snug">{item.name}</h4>
+                                                            </div>
+                                                            <button onClick={() => updateProductQuantity(item, 0)} className="text-gray-300 hover:text-red-500 font-bold p-1 text-sm">✕</button>
                                                         </div>
-                                                        <button onClick={() => updateProductQuantity(item, 0)} className="text-red-400 font-bold p-1 hover:text-red-600 text-lg">✕</button>
+                                                        <div className="flex justify-between items-center mt-2">
+                                                            <span className="font-extrabold text-amber-700 text-sm">${pricePerUnit}</span>
+                                                            <div className="flex items-center gap-1.5 bg-gray-100 p-1 rounded-2xl">
+                                                                <button onClick={() => updateProductQuantity(item, qty - 1)} className="w-6 h-6 bg-white font-bold rounded-xl shadow-xs text-gray-700 text-xs">−</button>
+                                                                <span className="px-1 font-extrabold text-gray-800 text-xs">{qty}</span>
+                                                                <button onClick={() => updateProductQuantity(item, qty + 1)} className="w-6 h-6 bg-white font-bold rounded-xl shadow-xs text-gray-700 text-xs">+</button>
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             );
                                         })}
                                     </div>
 
-                                    <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm space-y-3 text-sm">
-                                        <div className="flex justify-between text-gray-600 font-medium"><span>Subtotal:</span><span>${subtotal}</span></div>
-                                        <div className="flex justify-between text-gray-600 font-medium">
-                                            <span>Envío:</span>
-                                            <span>{shipping === 0 ? <span className="text-green-600 font-bold">¡GRATIS!</span> : `$${shipping}`}</span>
+                                    {/* Resumen de costos */}
+                                    <div className="bg-white p-5 rounded-3xl border border-slate-100 soft-card space-y-2.5 mt-6">
+                                        <div className="flex justify-between text-gray-500 text-xs font-medium">
+                                            <span>Subtotal:</span>
+                                            <span className="font-semibold text-gray-800">${subtotal}</span>
                                         </div>
-                                        <div className="flex justify-between font-extrabold text-lg border-t pt-3 text-gray-800">
-                                            <span>Total:</span><span className="text-amber-700">${total}</span>
+                                        <div className="flex justify-between text-gray-500 text-xs font-medium">
+                                            <span>Envío:</span>
+                                            <span>{shipping === 0 ? <span className="text-emerald-600 font-bold">¡GRATIS!</span> : `$${shipping}`}</span>
+                                        </div>
+                                        {hasMembership && (
+                                            <div className="flex justify-between text-emerald-700 text-xs font-bold bg-emerald-50 p-2 rounded-xl border border-emerald-100">
+                                                <span>✨ Ahorro Socio VIP:</span>
+                                                <span>10% OFF + Envío gratis</span>
+                                            </div>
+                                        )}
+                                        <div className="flex justify-between font-extrabold text-base border-t border-gray-100 pt-3 mt-2 text-gray-900">
+                                            <span>Total a pagar:</span>
+                                            <span className="text-amber-700">${total}</span>
                                         </div>
                                     </div>
 
                                     {!minMet && (
-                                        <div className="bg-red-50 text-red-700 p-3.5 rounded-xl text-xs font-bold text-center border border-red-200">
-                                            Faltan ${(MIN_ORDER - subtotal).toLocaleString('es-AR')} para alcanzar el mínimo de compra ($90.000).
+                                        <div className="bg-red-50 text-red-700 p-4 rounded-2xl text-xs font-bold text-center border border-red-200/80 leading-relaxed">
+                                            ⚠️ Te faltan ${(MIN_ORDER - subtotal).toLocaleString('es-AR')} para alcanzar el mínimo de compra ($90.000).
                                         </div>
                                     )}
 
                                     <button 
                                         disabled={!minMet}
                                         onClick={() => setCurrentPage('checkout')} 
-                                        className={`w-full py-3.5 rounded-xl font-bold text-sm transition shadow-sm mt-2 ${minMet ? 'bg-amber-700 text-white hover:bg-amber-800' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
+                                        className={`w-full py-4 rounded-2xl font-bold text-sm transition shadow-lg mt-2 ${minMet ? 'bg-amber-700 text-white hover:bg-amber-800 shadow-amber-700/20 active:scale-[0.98]' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
                                     >
-                                        Proceder al Pago
+                                        Proceder al Pago →
                                     </button>
                                 </>
                             )}
@@ -540,31 +980,214 @@
                 );
             };
 
-            // 8. COMMUNITY (RECETAS)
+            // PÁGINA: CHECKOUT
+            const renderCheckoutPage = () => {
+                const { total } = calculateCartTotal();
+
+                if (orderPlaced) {
+                    const orderData = {
+                        orderNumber: generatedOrderNumber,
+                        date: new Date().toLocaleDateString('es-AR'),
+                        items: cart,
+                        total: total
+                    };
+
+                    return (
+                        <div className="min-h-screen bg-gradient-to-b from-emerald-50 via-gray-50 to-emerald-50/40 p-6 flex flex-col justify-center items-center max-w-md mx-auto text-center">
+                            <div className="w-20 h-20 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center text-4xl mb-4 shadow-md">🎉</div>
+                            <h1 className="text-2xl font-extrabold text-emerald-950 mb-1">¡Pedido Confirmado!</h1>
+                            <p className="text-xs text-emerald-800 font-medium mb-5">Número de Orden: <strong>#{generatedOrderNumber}</strong></p>
+                            
+                            <div className="bg-white rounded-3xl p-5 w-full soft-card border border-emerald-100 mb-4 text-left text-xs space-y-2.5">
+                                <p><strong className="text-gray-700">Email:</strong> {userEmail}</p>
+                                <p><strong className="text-gray-700">Dirección:</strong> {address}</p>
+                                {deliveryNotes && <p className="text-gray-500 italic"><strong className="text-gray-700">Nota:</strong> "{deliveryNotes}"</p>}
+                                <p><strong className="text-gray-700">Entrega programada:</strong> {selectedDeliveryDate || minDateStr} ({selectedTimeSlot})</p>
+                                <div className="border-t border-gray-100 pt-2 flex justify-between font-extrabold text-amber-800 text-sm">
+                                    <span>Total abonado:</span>
+                                    <span>${total}</span>
+                                </div>
+
+                                {paymentMethod === 'transfer' && (
+                                    <div className="bg-amber-50 border-l-4 border-amber-600 p-3 rounded-2xl text-amber-900 text-[11px] mt-2 leading-relaxed">
+                                        ⚠️ <strong>Importante:</strong> Te enviamos la CBU/Alias por email. Tenés <strong>12 horas</strong> para transferir.
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="w-full bg-blue-50/80 border border-blue-200/80 p-4 rounded-3xl mb-4 text-center space-y-2">
+                                <p className="text-xs font-bold text-blue-900">
+                                    {surveyCompleted 
+                                        ? "✅ ¡Muchas gracias por tu feedback!" 
+                                        : "💬 ¿Nos ayudás respondiendo 2 preguntas? (Opcional)"}
+                                </p>
+                                <button
+                                    onClick={() => {
+                                        window.open('https://form.typeform.com/to/YVsFpl4n', '_blank');
+                                        setSurveyCompleted(true);
+                                    }}
+                                    className="w-full bg-blue-600 text-white py-3 rounded-2xl font-bold text-xs shadow-md shadow-blue-600/20 hover:bg-blue-700 transition"
+                                >
+                                    📋 {surveyCompleted ? "Completar encuesta nuevamente" : "Completar Encuesta de Opinión"}
+                                </button>
+                            </div>
+
+                            <button
+                                onClick={() => {
+                                    setLastOrder(orderData);
+                                    localStorage.setItem(`lapostaLastOrder_${userEmail}`, JSON.stringify(orderData));
+                                    setCart([]);
+                                    setOrderPlaced(false);
+                                    setSurveyCompleted(false);
+                                    setCurrentPage('home');
+                                }}
+                                className="w-full bg-amber-700 text-white py-4 rounded-2xl font-bold text-xs transition hover:bg-amber-800 shadow-lg shadow-amber-700/20"
+                            >
+                                Volver al inicio →
+                            </button>
+                        </div>
+                    );
+                }
+
+                return (
+                    <div className="min-h-screen bg-slate-50 pb-28 max-w-md mx-auto">
+                        <div className="bg-white border-b border-slate-100 p-4 sticky top-0 z-10 backdrop-blur-md bg-white/90 flex justify-between items-center">
+                            <button onClick={() => setCurrentPage('cart')} className="text-xs font-bold text-amber-800 bg-amber-50 px-3 py-1.5 rounded-full">← Volver al carrito</button>
+                            <h1 className="text-base font-bold text-gray-900">Finalizar Compra 💳</h1>
+                            <div></div>
+                        </div>
+
+                        <div className="p-4 space-y-4">
+                            <div className="bg-white p-5 rounded-3xl border border-slate-100 soft-card space-y-3.5 text-xs">
+                                <h3 className="font-extrabold text-gray-900 border-b border-gray-100 pb-2 text-sm">1. Dirección y Horario de Entrega</h3>
+                                <div>
+                                    <label className="block text-gray-700 mb-1.5 font-bold">Dirección exacta *</label>
+                                    <input
+                                        type="text"
+                                        placeholder="Calle, número, piso/depto"
+                                        value={address}
+                                        onChange={(e) => setAddress(e.target.value)}
+                                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs focus:outline-none focus:ring-2 focus:ring-amber-500 font-medium"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-gray-700 mb-1.5 font-bold">Aclaraciones para el delivery (opcional)</label>
+                                    <input
+                                        type="text"
+                                        placeholder="Ej: Tocar timbre 2B, portón negro..."
+                                        value={deliveryNotes}
+                                        onChange={(e) => setDeliveryNotes(e.target.value)}
+                                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs focus:outline-none focus:ring-2 focus:ring-amber-500 font-medium"
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label className="block text-gray-700 mb-1.5 font-bold">Fecha (Mín. 3 días)</label>
+                                        <input
+                                            type="date"
+                                            min={minDateStr}
+                                            value={selectedDeliveryDate || minDateStr}
+                                            onChange={(e) => setSelectedDeliveryDate(e.target.value)}
+                                            className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-xs focus:outline-none focus:ring-2 focus:ring-amber-500 font-medium"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-gray-700 mb-1.5 font-bold">Horario</label>
+                                        <select
+                                            value={selectedTimeSlot}
+                                            onChange={(e) => setSelectedTimeSlot(e.target.value)}
+                                            className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-xs focus:outline-none focus:ring-2 focus:ring-amber-500 font-medium"
+                                        >
+                                            <option value="09:00 - 13:00">Mañana (09 - 13 hs)</option>
+                                            <option value="14:00 - 18:00">Tarde (14 - 18 hs)</option>
+                                            <option value="18:00 - 21:00">Noche (18 - 21 hs)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="bg-white p-5 rounded-3xl border border-slate-100 soft-card space-y-3.5 text-xs">
+                                <h3 className="font-extrabold text-gray-900 border-b border-gray-100 pb-2 text-sm">2. Medio de Pago</h3>
+                                <div className="space-y-2">
+                                    {[
+                                        { id: 'mercadopago', name: 'Mercado Pago', icon: '📱' },
+                                        { id: 'credit', name: 'Tarjeta de Crédito', icon: '💳' },
+                                        { id: 'debit', name: 'Tarjeta de Débito', icon: '💳' },
+                                        { id: 'transfer', name: 'Transferencia Bancaria', icon: '🏦' },
+                                    ].map(method => (
+                                        <label
+                                            key={method.id}
+                                            className={`flex items-center gap-3 p-3 border rounded-2xl cursor-pointer transition ${
+                                                paymentMethod === method.id 
+                                                    ? 'border-amber-600 bg-amber-50/80 font-bold text-amber-950' 
+                                                    : 'border-gray-200/80 hover:bg-gray-50'
+                                            }`}
+                                        >
+                                            <input
+                                                type="radio"
+                                                name="payment"
+                                                checked={paymentMethod === method.id}
+                                                onChange={() => setPaymentMethod(method.id)}
+                                                className="text-amber-600 focus:ring-amber-500"
+                                            />
+                                            <span className="text-lg">{method.icon}</span>
+                                            <span className="text-xs font-semibold">{method.name}</span>
+                                        </label>
+                                    ))}
+                                </div>
+
+                                {paymentMethod === 'transfer' && (
+                                    <div className="bg-amber-100/70 border-l-4 border-amber-600 p-3 rounded-2xl text-amber-900 text-[11px] leading-relaxed">
+                                        ⚠️ <strong>Plazo de pago:</strong> 12 horas hábiles para realizar la transferencia.
+                                    </div>
+                                )}
+                            </div>
+
+                            <button
+                                onClick={() => {
+                                    if (address.trim()) {
+                                        const num = generateOrderNumber();
+                                        setGeneratedOrderNumber(num);
+                                        setSurveyCompleted(false);
+                                        setOrderPlaced(true);
+                                    } else {
+                                        alert('Por favor ingresá tu dirección exacta');
+                                    }
+                                }}
+                                className="w-full bg-amber-700 text-white py-4 rounded-2xl font-bold text-sm shadow-lg shadow-amber-700/20 hover:bg-amber-800 transition active:scale-[0.98]"
+                            >
+                                Confirmar y Pagar (${total})
+                            </button>
+                        </div>
+                    </div>
+                );
+            };
+
+            // PÁGINA: COMUNIDAD Y RECETAS
             const renderCommunityPage = () => (
-                <div className="min-h-screen bg-gray-50 pb-20">
-                    <div className="bg-amber-700 text-white p-4 sticky top-0 z-10 shadow">
+                <div className="min-h-screen bg-slate-50 pb-28">
+                    <div className="bg-white border-b border-slate-100 p-4 sticky top-0 z-10 backdrop-blur-md bg-white/90">
                         <div className="flex justify-between items-center max-w-md mx-auto">
-                            <button onClick={() => setCurrentPage('home')} className="text-amber-100 text-xs font-bold">← Volver</button>
-                            <h1 className="text-lg font-bold">Comunidad & Recetas 👥</h1>
-                            <button onClick={handleLogout} className="text-lg">🚪</button>
+                            <button onClick={() => setCurrentPage('home')} className="text-xs font-bold text-amber-800 bg-amber-50 px-3 py-1.5 rounded-full">← Volver</button>
+                            <h1 className="text-base font-bold text-gray-900">Comunidad & Recetas 👥</h1>
+                            <button onClick={handleLogout} title="Cerrar Sesión" className="text-base p-1.5 bg-gray-100 rounded-full">🚪</button>
                         </div>
                     </div>
 
                     <div className="p-4 space-y-6 max-w-md mx-auto">
-                        <div className="bg-purple-50 border-l-4 border-purple-500 p-3.5 rounded-xl text-xs text-purple-900 leading-relaxed shadow-sm">
-                            🍳 <strong>Recetas Interactivas:</strong> Leé las instrucciones y agregá los ingredientes disponibles directo a tu carrito. Todo 100% sin gluten.
-                        </div>
-
-                        <div className="space-y-6">
-                            <h2 className="text-lg font-extrabold text-gray-800">📖 Recetas Saludables</h2>
+                        {/* SECCIÓN 1: RECETAS INTERACTIVAS */}
+                        <div className="space-y-4">
+                            <div className="bg-purple-50 border border-purple-200/80 p-4 rounded-3xl text-xs text-purple-950 leading-relaxed soft-card">
+                                🍳 <strong>Recetas Interactivas:</strong> Leé las instrucciones y agregá los ingredientes libres de gluten directo a tu carrito en un toque.
+                            </div>
+                            <h2 className="text-base font-extrabold text-gray-900">📖 Recetas Saludables</h2>
                             
                             {communityRecipes.map(recipe => (
-                                <div key={recipe.id} className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden p-4">
-                                    <div className="flex items-center gap-3 border-b border-gray-100 pb-3 mb-3">
-                                        <span className="text-4xl p-2 bg-amber-50 rounded-xl border border-amber-100">{recipe.image}</span>
+                                <div key={recipe.id} className="bg-white rounded-3xl border border-slate-100 soft-card overflow-hidden p-5 space-y-4">
+                                    <div className="flex items-center gap-3 border-b border-gray-100 pb-3">
+                                        <span className="text-4xl p-2.5 bg-amber-50 rounded-2xl border border-amber-100/60">{recipe.image}</span>
                                         <div>
-                                            <h3 className="font-bold text-gray-800 text-base">{recipe.title}</h3>
+                                            <h3 className="font-extrabold text-gray-900 text-sm">{recipe.title}</h3>
                                             <div className="flex gap-2 text-[11px] text-gray-500 mt-1 font-medium">
                                                 <span>⏱️ {recipe.time}</span>
                                                 <span>•</span>
@@ -574,7 +1197,7 @@
                                     </div>
 
                                     <div>
-                                        <p className="text-xs font-bold text-amber-900 mb-2 flex items-center gap-1">🛒 Ingredientes y Disponibilidad:</p>
+                                        <p className="text-xs font-bold text-amber-900 mb-2.5 flex items-center gap-1">🛒 Ingredientes disponibles:</p>
                                         <div className="space-y-2">
                                             {recipe.ingredients.map((ing, i) => {
                                                 const product = ing.productId ? allProducts.find(p => p.id === ing.productId) : null;
@@ -583,27 +1206,29 @@
                                                 const pricePerUnit = product ? calculatePrice(product, qty || 1) : 0;
 
                                                 return (
-                                                    <div key={i} className="flex items-center justify-between p-2.5 bg-gray-50 rounded-xl border border-gray-100 text-xs">
+                                                    <div key={i} className="flex items-center justify-between p-2.5 bg-slate-50 rounded-2xl border border-slate-100 text-xs">
                                                         <div className="flex items-center gap-2 pr-2">
                                                             <span className="text-gray-400">•</span>
-                                                            <span className="text-gray-800 font-medium">{ing.text}</span>
+                                                            <span className="text-gray-800 font-medium cursor-pointer hover:text-amber-800" onClick={() => product ? setCurrentPage(`product-${product.id}`) : null}>
+                                                                {ing.text}
+                                                            </span>
                                                         </div>
 
                                                         {product ? (
-                                                            <div className="flex items-center gap-3 flex-shrink-0">
+                                                            <div className="flex items-center gap-2 flex-shrink-0">
                                                                 <span className="text-xs font-extrabold text-amber-700">${pricePerUnit}</span>
                                                                 {qty === 0 ? (
-                                                                    <button onClick={() => updateProductQuantity(product, 1)} className="bg-amber-700 text-white px-3 py-1.5 rounded-lg text-[11px] font-bold hover:bg-amber-800 transition shadow-sm">+ Agregar</button>
+                                                                    <button onClick={() => updateProductQuantity(product, 1)} className="bg-amber-700 text-white px-3 py-1.5 rounded-xl text-[11px] font-bold hover:bg-amber-800 transition shadow-xs">+ Agregar</button>
                                                                 ) : (
-                                                                    <div className="flex items-center gap-1.5 bg-amber-100 p-1 rounded-lg border border-amber-300">
-                                                                        <button onClick={() => updateProductQuantity(product, qty - 1)} className="w-5 h-5 bg-white text-amber-800 rounded font-bold shadow-sm flex items-center justify-center text-[10px]">−</button>
-                                                                        <span className="text-xs font-bold text-amber-900 min-w-[14px] text-center">{qty}</span>
-                                                                        <button onClick={() => updateProductQuantity(product, qty + 1)} className="w-5 h-5 bg-amber-700 text-white rounded font-bold shadow-sm flex items-center justify-center text-[10px]">+</button>
+                                                                    <div className="flex items-center gap-1 bg-amber-100 p-1 rounded-xl border border-amber-200">
+                                                                        <button onClick={() => updateProductQuantity(product, qty - 1)} className="w-5 h-5 bg-white text-amber-900 rounded-lg font-bold shadow-xs flex items-center justify-center text-[10px]">−</button>
+                                                                        <span className="text-xs font-bold text-amber-950 min-w-[14px] text-center">{qty}</span>
+                                                                        <button onClick={() => updateProductQuantity(product, qty + 1)} className="w-5 h-5 bg-amber-700 text-white rounded-lg font-bold shadow-xs flex items-center justify-center text-[10px]">+</button>
                                                                     </div>
                                                                 )}
                                                             </div>
                                                         ) : (
-                                                            <span className="text-[10px] text-gray-400 italic bg-gray-200 px-2 py-1 rounded-lg flex-shrink-0">En casa</span>
+                                                            <span className="text-[10px] text-gray-400 italic bg-gray-200/80 px-2 py-1 rounded-xl flex-shrink-0">En casa</span>
                                                         )}
                                                     </div>
                                                 );
@@ -611,77 +1236,137 @@
                                         </div>
                                     </div>
 
-                                    <div className="bg-amber-50 p-3.5 rounded-xl border border-amber-100 mt-4 space-y-2">
-                                        <p className="text-xs font-bold text-amber-950 flex items-center gap-1">👨‍🍳 Preparación Paso a Paso:</p>
+                                    <div className="bg-amber-50/60 p-4 rounded-2xl border border-amber-100/80 space-y-2">
+                                        <p className="text-xs font-bold text-amber-950">👨‍🍳 Paso a Paso:</p>
                                         <ol className="text-xs space-y-1.5 text-gray-700 list-decimal pl-4">
                                             {recipe.steps.map((step, sIdx) => <li key={sIdx} className="pl-1 leading-relaxed">{step}</li>)}
                                         </ol>
-                                    </div>
-
-                                    <div className="bg-green-50 p-3 rounded-xl border border-green-200 text-xs text-green-900 mt-3 flex items-start gap-2">
-                                        <span className="text-base">💚</span>
-                                        <p className="mt-0.5"><strong>Tip:</strong> {recipe.tip}</p>
                                     </div>
                                 </div>
                             ))}
                         </div>
 
-                        <div className="space-y-3 pt-4">
-                            <div className="flex justify-between items-center border-b pb-2">
-                                <h2 className="text-md font-bold text-gray-800">🍽️ Restaurantes & Lugares sin gluten</h2>
-                                <span className="bg-amber-100 text-amber-800 text-[9px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider border border-amber-300">PRÓXIMAMENTE</span>
+                        {/* SECCIÓN 2: RESTAURANTES & LUGARES SIN GLUTEN */}
+                        <div className="space-y-3 pt-4 border-t border-gray-200">
+                            <div className="flex justify-between items-center">
+                                <h2 className="text-sm font-extrabold text-gray-900 flex items-center gap-1.5">🍽️ Restaurantes & Lugares Sin Gluten</h2>
+                                <span className="bg-amber-100 text-amber-900 text-[9px] font-extrabold px-2.5 py-1 rounded-full uppercase border border-amber-200/60 text-center leading-tight">
+                                    PRÓXIMAMENTE - EN DESARROLLO
+                                </span>
                             </div>
-                            <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm opacity-60">
-                                <p className="text-xs text-gray-500 font-medium">Muy pronto vas a poder descubrir lugares 100% seguros y certificados sin gluten cerca tuyo.</p>
+                            <div className="bg-white p-5 rounded-3xl border border-slate-100 soft-card space-y-3.5">
+                                <p className="text-xs text-gray-500 font-medium leading-relaxed">
+                                    Muy pronto vas a poder descubrir lugares, pizzerías, cafeterías y bodegones 100% seguros y certificados sin gluten cerca tuyo en CABA y AMBA.
+                                </p>
+                                
+                                <div className="space-y-2">
+                                    <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 flex justify-between items-center">
+                                        <div>
+                                            <p className="font-bold text-xs text-gray-800">📍 Pizzería Gourmet Sin Gluten</p>
+                                            <p className="text-[10px] text-gray-500 mt-0.5">Palermo, CABA • 100% Libre de Gluten</p>
+                                        </div>
+                                        <span className="text-xs font-bold text-gray-700 flex items-center gap-1">⭐ 4.9</span>
+                                    </div>
+
+                                    <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 flex justify-between items-center">
+                                        <div>
+                                            <p className="font-bold text-xs text-gray-800">☕ Café & Panadería Gluten Free</p>
+                                            <p className="text-[10px] text-gray-500 mt-0.5">Belgrano, CABA • Cocina exclusiva</p>
+                                        </div>
+                                        <span className="text-xs font-bold text-gray-700 flex items-center gap-1">⭐ 4.8</span>
+                                    </div>
+                                </div>
+
+                                <button disabled className="w-full bg-gray-100 text-gray-400 py-3 rounded-2xl font-bold text-xs cursor-not-allowed border border-gray-200/60">
+                                    🗺️ Explorar mapa interactivo (Próximamente)
+                                </button>
                             </div>
                         </div>
+
+                        {/* SECCIÓN 3: BLOG Y FORO DE LA COMUNIDAD */}
+                        <div className="space-y-3 pt-2">
+                            <div className="flex justify-between items-center">
+                                <h2 className="text-sm font-extrabold text-gray-900 flex items-center gap-1.5">💬 Blog & Foro de la Comunidad</h2>
+                                <span className="bg-amber-100 text-amber-900 text-[9px] font-extrabold px-2.5 py-1 rounded-full uppercase border border-amber-200/60 text-center leading-tight">
+                                    PRÓXIMAMENTE - EN DESARROLLO
+                                </span>
+                            </div>
+                            <div className="bg-white p-5 rounded-3xl border border-slate-100 soft-card space-y-3.5">
+                                <p className="text-xs text-gray-500 font-medium leading-relaxed">
+                                    Un espacio pensado para compartir experiencias, tips de cocina, recomendaciones de marcas y reseñas sobre productos libres de gluten.
+                                </p>
+                                
+                                <div className="p-3.5 bg-amber-50/80 rounded-2xl border border-amber-100/80">
+                                    <p className="font-bold text-xs text-gray-800 flex items-center gap-2">💬 "¿Cuál es la mejor premezcla para hacer pan?"</p>
+                                    <p className="text-[10px] text-gray-500 mt-1 ml-6">Publicado por María P. • 12 comentarios</p>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
 
                     <BottomNav active="community" />
                 </div>
             );
 
+            // BARRA DE NAVEGACIÓN INFERIOR ESTILO NATIVO CON BOTÓN DE SALIR
             const BottomNav = ({ active }) => (
-                <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around p-3 z-20 max-w-md mx-auto shadow-[0_-5px_15px_rgba(0,0,0,0.05)] pb-5">
-                    <button onClick={() => setCurrentPage('home')} className={`flex flex-col items-center text-[10px] font-bold ${active === 'home' ? 'text-amber-700' : 'text-gray-400'}`}><span className="text-2xl mb-1">📋</span>Catálogo</button>
-                    <button onClick={() => setCurrentPage('community')} className={`flex flex-col items-center text-[10px] font-bold ${active === 'community' ? 'text-amber-700' : 'text-gray-400'}`}><span className="text-2xl mb-1">👨‍🍳</span>Comunidad</button>
-                    <button onClick={() => setCurrentPage('cart')} className={`flex flex-col items-center text-[10px] font-bold relative ${active === 'cart' ? 'text-amber-700' : 'text-gray-400'}`}>
-                        <span className="text-2xl mb-1">🛍️</span>
-                        {cartSummary.totalItems > 0 && <span className="absolute -top-1 right-2 bg-red-500 text-white text-[9px] rounded-full w-4 h-4 flex items-center justify-center font-bold">{cartSummary.totalItems}</span>}
-                        Shop
+                <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-100 flex justify-around p-2 z-20 max-w-md mx-auto shadow-2xl pb-6">
+                    <button onClick={() => setCurrentPage('home')} className={`flex flex-col items-center px-3 py-1.5 rounded-2xl transition-all ${active === 'home' ? 'text-amber-800 bg-amber-50 font-extrabold shadow-xs' : 'text-gray-400 font-semibold hover:text-gray-600'}`}>
+                        <span className="text-lg mb-0.5">🏠</span>
+                        <span className="text-[10px]">Catálogo</span>
                     </button>
-                    <button onClick={handleLogout} className="flex flex-col items-center text-[10px] font-bold text-gray-400 hover:text-red-500"><span className="text-2xl mb-1">👤</span>Salir</button>
+                    <button onClick={() => setCurrentPage('community')} className={`flex flex-col items-center px-3 py-1.5 rounded-2xl transition-all ${active === 'community' ? 'text-amber-800 bg-amber-50 font-extrabold shadow-xs' : 'text-gray-400 font-semibold hover:text-gray-600'}`}>
+                        <span className="text-lg mb-0.5">👥</span>
+                        <span className="text-[10px]">Comunidad</span>
+                    </button>
+                    <button onClick={() => setCurrentPage('cart')} className={`flex flex-col items-center px-3 py-1.5 rounded-2xl transition-all relative ${active === 'cart' ? 'text-amber-800 bg-amber-50 font-extrabold shadow-xs' : 'text-gray-400 font-semibold hover:text-gray-600'}`}>
+                        <span className="text-lg mb-0.5">🛒</span>
+                        {cartSummary.totalItems > 0 && <span className="absolute top-1 right-2 bg-red-500 text-white text-[9px] rounded-full w-4 h-4 flex items-center justify-center font-extrabold shadow-xs">{cartSummary.totalItems}</span>}
+                        <span className="text-[10px]">Carrito</span>
+                    </button>
+                    <button onClick={() => setCurrentPage('profile')} className={`flex flex-col items-center px-3 py-1.5 rounded-2xl transition-all ${active === 'profile' ? 'text-amber-800 bg-amber-50 font-extrabold shadow-xs' : 'text-gray-400 font-semibold hover:text-gray-600'}`}>
+                        <span className="text-lg mb-0.5">👤</span>
+                        <span className="text-[10px]">Perfil</span>
+                    </button>
+                    <button onClick={handleLogout} className="flex flex-col items-center px-3 py-1.5 rounded-2xl transition-all text-gray-400 font-semibold hover:text-red-600">
+                        <span className="text-lg mb-0.5">🚪</span>
+                        <span className="text-[10px]">Salir</span>
+                    </button>
                 </div>
             );
 
             return (
-                <div className="relative min-h-screen bg-[#FDFDFD]">
+                <div className="relative min-h-screen bg-slate-50">
                     {currentPage === 'welcome' && renderWelcomePage()}
                     {currentPage === 'membership' && renderMembershipPage()}
                     {currentPage === 'home' && renderHomePage()}
                     {currentPage === 'cart' && renderCartPage()}
+                    {currentPage === 'checkout' && renderCheckoutPage()}
                     {currentPage === 'community' && renderCommunityPage()}
+                    {currentPage === 'profile' && renderProfilePage()}
+                    {currentPage.startsWith('product-') && renderProductPage(currentPage.replace('product-', ''))}
                     
-                    {/* POP UP FLOTANTE DE NOTIFICACIÓN CON BOTÓN "IR A PAGAR" */}
+                    {/* NOTIFICACIÓN FLOTANTE */}
                     {addedNotification && (
-                        <div className="fixed bottom-24 left-0 right-0 px-4 z-50 animate-slide-up max-w-md mx-auto">
-                            <div className="bg-gray-900 text-white p-3.5 rounded-2xl shadow-2xl flex items-center justify-between gap-3 border border-gray-700">
-                                <div className="flex items-center gap-3 overflow-hidden">
-                                    <span className="text-3xl flex-shrink-0 bg-gray-800 p-1.5 rounded-xl">{addedNotification.image}</span>
+                        <div className="fixed bottom-24 left-4 right-4 z-50 animate-slide-up max-w-md mx-auto">
+                            <div className="bg-gray-900/95 backdrop-blur-md text-white p-3.5 rounded-3xl shadow-2xl flex items-center justify-between gap-3 border border-gray-800">
+                                <div className="flex items-center gap-3 overflow-hidden pl-1">
+                                    <span className="text-2xl flex-shrink-0 bg-gray-800 p-2 rounded-2xl">{addedNotification.image}</span>
                                     <div className="truncate">
-                                        <p className="text-[10px] text-amber-400 font-extrabold uppercase tracking-wider">¡Agregado al carrito!</p>
-                                        <p className="text-xs font-semibold truncate text-white">{addedNotification.name}</p>
+                                        <p className="text-[9px] text-amber-400 font-extrabold uppercase tracking-wider">¡Agregado!</p>
+                                        <p className="text-xs font-bold truncate text-white">{addedNotification.name}</p>
                                     </div>
                                 </div>
 
-                                <div className="flex items-center gap-2 flex-shrink-0">
+                                <div className="flex items-center gap-2 flex-shrink-0 pr-1">
                                     <button
                                         onClick={() => { setAddedNotification(null); setCurrentPage('cart'); }}
-                                        className="bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition shadow-md whitespace-nowrap border border-amber-500"
+                                        className="bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold px-3.5 py-2 rounded-2xl transition shadow-md whitespace-nowrap"
                                     >
                                         Ir a Pagar →
                                     </button>
-                                    <button onClick={() => setAddedNotification(null)} className="text-gray-400 hover:text-white p-2 text-sm font-bold">✕</button>
+                                    <button onClick={() => setAddedNotification(null)} className="text-gray-400 hover:text-white p-1 text-sm font-bold">✕</button>
                                 </div>
                             </div>
                         </div>
